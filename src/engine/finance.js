@@ -90,6 +90,9 @@ Calculator.register({
 function amort(c) {
   const s = c.state, k = c.x;
   if (!k.isInteger() || k.lte(0) || s.fin.i.lte(-100)) throw E5();
+  // The hardware grinds through any k; here a runaway k would freeze the page, so cap it
+  // at 99,999 payments (over 8,000 years of monthly payments).
+  if (k.gt(99999)) throw E5();
   const d = c.dispDecimals(), r = s.fin.i.div(HUNDRED);
   const rd = v => v.toDecimalPlaces(d, D.ROUND_HALF_UP);
   const pmt = rd(s.fin.pmt), sign = pmt.isNeg() ? -1 : 1;

@@ -57,7 +57,7 @@ Calculator.register({
   rclCfo(c) { c.push(cfGet(c.state, 0)); },
   rclCfj(c) {
     const s = c.state, j = counter(s);
-    c.push(cfGet(s, j)); s.fin.n = new D(j - 1);
+    c.push(cfGet(s, j)); s.fin.n = new D(Math.max(0, j - 1));   // stops at CF0
   },
   rclNj(c) { const s = c.state; c.push(new D(s.nj[counter(s)])); },
   npv(c) {

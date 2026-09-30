@@ -42,3 +42,8 @@ test('80 flows with Nj=99: extended storage, IRR fast', () => {
   assert.ok(Date.now() - t0 < 1000, 'IRR too slow: ' + (Date.now() - t0));
   assert.equal(disp(run(c, '81 CFj')).slice(0, 5), 'Error');
 });
+test('RCL CFj stops at CF0', () => {
+  const c = run(fresh(), 'CLREG 5 CFo 6 CFj RCL CFj RCL CFj RCL CFj');
+  assert.equal(disp(c), '5.00');
+  assert.equal(disp(run(c, 'RCL n')), '0.00');
+});

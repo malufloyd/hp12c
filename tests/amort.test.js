@@ -1,5 +1,6 @@
 import { test } from 'node:test';
-import { fresh, steps } from './helpers.js';
+import assert from 'node:assert/strict';
+import { fresh, run, disp, steps } from './helpers.js';
 
 test('E1 amortize 12 then 12', () => steps(fresh(), [
   ['CLFIN 5.25 12/ 250000 PV 1498.12 CHS PMT END', '-1,498.12'],
@@ -14,3 +15,7 @@ test('E3 30-year', () => steps(fresh(), [
   ['CLFIN 5.25 12/ 30 12x 250000 PV END PMT', '-1,380.51'],
   ['0 n 1 AMORT', '-1,093.75'], ['x<>y', '-286.76'], ['RCL PV', '249,713.24'],
 ]));
+test('AMORT rejects bad counts', () => {
+  const base = 'CLFIN 1 i 1000 PV 100 CHS PMT ';
+  for (const k of ['0', '1.5', '100000']) assert.equal(disp(run(fresh(), base + k + ' AMORT')), 'Error 5', k);
+});
