@@ -25,11 +25,11 @@ function evalPending(c) {
 
 export function algBinary(c, opName) {
   const s = c.state;
-  // Operator pressed right after another one (X is still the running result): just replace it.
-  if (s.alg.op && s.stack[0] === s.alg.acc) { s.alg.op = opName; return; }
+  // Operator pressed right after another one (no key in between): just replace it.
+  if (s.alg.op && s.alg.opJust) { s.alg.op = opName; return; }
   const x = s.stack[0], r = evalPending(c);
   s.lastX = x;
-  s.alg.acc = r; s.alg.op = opName;
+  s.alg.acc = r; s.alg.op = opName; s.alg.opJust = true;   // Calculator.perform clears it on any other key
   s.stack[0] = r; s.lift = false; s.finStored = false;
 }
 
@@ -75,6 +75,13 @@ Calculator.register({
     s.stack[0] = s.lastX; s.lastX = x; s.finStored = false;
   },
   equals,
+  // Second consecutive CLx also clears the pending operation and parentheses (manual App. B).
+  clx(c, arg) {
+    if (!inAlg(c)) return prev.clx(c, arg);
+    const a = c.state.alg, again = a.clxJust;
+    prev.clx(c, arg);
+    if (again) c.state.alg = freshAlg(); else a.clxJust = true;
+  },
   lparen(c) {
     const a = c.state.alg;
     if (a.parens.length >= MAX_PARENS) throw new CalcError(4);

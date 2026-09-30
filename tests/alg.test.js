@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, run, disp, steps } from './helpers.js';
+import { Calculator } from '../src/engine/calculator.js';
 const alg = () => run(fresh(), 'ALG');
 
 test('ALG annunciator', () => {
@@ -45,4 +46,23 @@ test('back to RPN', () => {
 test('a second operator replaces the pending one', () => {
   assert.equal(disp(run(alg(), '5 + x 3 =')), '15.00');
   assert.equal(disp(run(alg(), '2 + 3 x - 1 =')), '4.00');
+});
+
+test('I2: CLx CLx clears the pending operation (manual App. B p.242)', () => {
+  assert.equal(disp(run(alg(), '100 + CLx CLx 5 x 2 =')), '10.00');
+  assert.equal(disp(run(alg(), '5 + CLx CLx 3 =')), '3.00');
+  assert.equal(disp(run(alg(), '2 x ( 3 + CLx CLx 4 + 1 =')), '5.00');   // parentheses cleared too
+});
+test('I2: a single CLx keeps the pending operation', () => {
+  assert.equal(disp(run(alg(), '100 + 7 CLx 5 =')), '105.00');
+  assert.equal(disp(run(alg(), '100 + CLx 5 =')), '105.00');
+  assert.equal(disp(run(alg(), '100 + CLx 5 CLx 6 =')), '106.00');        // not consecutive
+  assert.equal(disp(run(alg(), '100 + CLx 5 CLx CLx 6 + 1 =')), '7.00');   // pair later clears
+});
+test('T5: operator replacement survives serialize/deserialize and ignores object identity', () => {
+  const c = run(alg(), '2 +');
+  const d = Calculator.deserialize(c.serialize());
+  assert.equal(disp(run(d, 'x 3 =')), '6.00');
+  assert.equal(disp(run(alg(), '5 + STO 1 RCL 1 + 1 =')), '11.00');         // recalled copy is a new entry
+  assert.equal(disp(run(alg(), '2 + x 3 =')), '6.00');
 });

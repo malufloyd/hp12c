@@ -16,6 +16,8 @@ export function cloneState(v) {
   return o;
 }
 
+const ALG_OPS = new Set(['add', 'sub', 'mul', 'div', 'yx']);
+
 export class Calculator {
   static ops = {};
   // op modules add handlers: { opName: (calc, arg) => void }. Re-registering a name replaces it
@@ -135,6 +137,9 @@ export class Calculator {
   }
   perform(action) {
     const s = this.state;
+    const a = s.alg, name0 = action.op ?? action.entry;     // ALG "previous key" flags (see alg.js)
+    if (!ALG_OPS.has(name0)) a.opJust = false;
+    if (name0 !== 'clx') a.clxJust = false;
     if (action.entry) {
       if (action.entry !== 'chs' || s.entry) return this.editEntry(action);   // chs with no entry runs as an op
     }

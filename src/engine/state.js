@@ -1,6 +1,6 @@
 import { ZERO } from './number.js';
 
-export const freshAlg = () => ({ acc: null, op: null, parens: [], opJust: false });
+export const freshAlg = () => ({ acc: null, op: null, parens: [], opJust: false, clxJust: false });
 
 export function freshState() {
   return {
