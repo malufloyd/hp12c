@@ -73,7 +73,7 @@ test('CHS on result and during entry', () => {
   assert.equal(disp(run(fresh(), '5 ENTER CHS')), '-5.00');
 });
 test('unimplemented ops throw, never silently ignored', () => {
-  assert.throws(() => run(fresh(), '5 sqrt'), /op not implemented: sqrt/);
+  assert.throws(() => run(fresh(), '5 xw'), /op not implemented: xw/);
 });
 
 // ---- Task 3 fix round 1 ----
