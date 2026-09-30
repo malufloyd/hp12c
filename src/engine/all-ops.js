@@ -2,3 +2,4 @@
 import './ops-basic.js';
 import './mathfn.js';
 import './clear.js';
+import './alg.js';   // must come after ops-basic.js / mathfn.js (wraps their handlers)

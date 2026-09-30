@@ -1,5 +1,7 @@
 import { ZERO } from './number.js';
 
+export const freshAlg = () => ({ acc: null, op: null, parens: [] });
+
 export function freshState() {
   return {
     stack: [ZERO, ZERO, ZERO, ZERO], lastX: ZERO,
@@ -14,7 +16,7 @@ export function freshState() {
     error: null,                                // number 0-9 or 'Pr'
     blink: false, off: false, showMantissa: false,
     cfExt: [], nj: Array(81).fill(1),
-    alg: { acc: null, op: null, parens: [] },
+    alg: freshAlg(),
     undo: null,
     prog: { lines: [], allotted: 8, pc: 0, prgmMode: false, running: false, waitUntil: 0 },
   };
