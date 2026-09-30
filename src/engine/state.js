@@ -18,6 +18,7 @@ export function freshState() {
     cfExt: [], nj: Array(81).fill(1),
     alg: freshAlg(),
     undo: null,
-    prog: { lines: [], allotted: 8, pc: 0, prgmMode: false, running: false, waitUntil: 0 },
+    prog: { lines: [], allotted: 8, pc: 0, prgmMode: false, running: false, waitUntil: 0,
+            rec: [], skip: false, pause: false, sstPending: false },
   };
 }

@@ -119,7 +119,7 @@ export class Calculator {
   press(code) {
     const s = this.state;
     if (s.off) return;
-    if (s.prog.running) { s.prog.running = false; s.prog.waitUntil = 0; return; }   // any key stops a program (swallowed)
+    if (s.prog.running) { s.prog.running = false; s.prog.waitUntil = 0; this.endEntry(); return; }   // any key stops a program (swallowed)
     if (s.error !== null) { s.error = null; s.blink = false; return; }
     if (s.prog.prgmMode) { s.blink = false; s.showMantissa = false; s.dateDisplay = null; if (this.recordKey(code)) return; }
     this.dispatch(code);

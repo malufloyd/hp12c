@@ -29,7 +29,7 @@ Object.assign(Calculator.prototype, {
   // Program-mode key: collect the raw codes of the instruction being formed; true = consumed.
   recordKey(code) {
     if (code === K.ON) return false;
-    const s = this.state, p = s.prog, buf = (this.recBuf ||= []);
+    const s = this.state, p = s.prog, buf = p.rec;
     if ((code === K.F || code === K.G) && (s.prefix === 'f' || s.prefix === 'g')) buf.length = 0;
     buf.push(code);
     const action = resolve(this, code);
@@ -39,6 +39,7 @@ Object.assign(Calculator.prototype, {
     if (IMMEDIATE.has(name) || (name === 'gto' && action.arg.dot)) { this.perform(action); return true; }
     if (NOT_PROGRAMMABLE.has(name)) return true;
     if (p.lines.length >= MAX_LINES) { s.error = 4; return true; }
+    if (name === 'gto' && action.arg.n > allottedFor(p.lines.length + 1)) { s.error = 4; return true; }
     const at = Math.min(p.pc, p.lines.length);
     p.lines.splice(at, 0, name === 'gto' ? [K.G, K.RDN, action.arg.n] : codes);
     p.pc = at + 1;
@@ -56,22 +57,26 @@ Object.assign(Calculator.prototype, {
 });
 
 // ---- runner ----
+// Every halt terminates any digit entry in progress; returns false (= stop running).
+function halt(calc) { calc.endEntry(); return false; }
+
 // Execute the line after pc. Returns true to keep running. now = null ignores PSE waits.
 export function step(calc, now = null) {
   let p = calc.state.prog;
   const next = p.pc + 1;
-  if (next > p.lines.length) { p.pc = 0; return false; }    // implicit GTO 000
+  if (next > p.lines.length) { p.pc = 0; return halt(calc); }   // implicit GTO 000
   const codes = p.lines[next - 1];
   p.pc = next;
   if (isGto(codes)) {
-    if (codes[2] === 0) { p.pc = 0; return false; }
+    if (codes[2] === 0) { p.pc = 0; return halt(calc); }
+    if (codes[2] > p.allotted) { calc.state.error = 4; return halt(calc); }   // GTO to a nonexistent line
     p.pc = codes[2] - 1;                                    // line n executes next
     return true;
   }
-  if (codes.length === 1 && codes[0] === K.RS) return false;
+  if (codes.length === 1 && codes[0] === K.RS) return halt(calc);
   p.skip = false; p.pause = false;
   for (const c of codes) calc.dispatch(c);
-  if (calc.state.error !== null) return false;              // errors halt the program
+  if (calc.state.error !== null) return halt(calc);           // errors halt the program
   p = calc.state.prog;                                      // exec may have replaced prog on rollback
   if (p.skip) p.pc++;
   if (p.pause && now !== null) p.waitUntil = now + 1000;
@@ -95,12 +100,18 @@ export function runUntilHalt(calc, maxSteps = 100000) {
     if (!step(calc, null)) { calc.state.prog.running = false; return true; }
   }
   calc.state.prog.running = false;
+  calc.endEntry();
   return false;
 }
 
 // ---- ops ----
 const cond = (name, test) => (c) => { c.state.prog.skip = !test(c); };
-const gotoLine = (c, n) => { if (n > c.state.prog.allotted) throw new CalcError(4); c.state.prog.pc = n; };
+// Program mode (g GTO . nnn) positions at line n; run mode makes line n the next one to execute.
+const gotoLine = (c, n) => {
+  const p = c.state.prog;
+  if (n > p.allotted) throw new CalcError(4);
+  p.pc = p.prgmMode ? n : Math.max(n - 1, 0);
+};
 
 Calculator.register({
   pr(c) { const p = c.state.prog; p.prgmMode = !p.prgmMode; p.pc = 0; },

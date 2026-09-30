@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, run, disp, steps } from './helpers.js';
 import { runUntilHalt, tick, formatLine } from '../src/engine/program.js';
+const runHalt = c => { runUntilHalt(c); return c; };
 
 test('K3 memory at reset', () => assert.equal(disp(run(fresh(), 'P/R MEM')), 'P-08 r-20'));
 test('K1 RPN program listing and run', () => {
@@ -63,9 +64,9 @@ test('non-programmable keys are ignored, CLEAR PRGM clears', () => {
 test('x<=y skips next line when false', () => {
   const c = run(fresh(), 'P/R CLPRGM x<=y 1 0 P/R');   // 001 x<=y, 002 1, 003 0
   run(c, '5 ENTER 3 R/S'); runUntilHalt(c);            // X=3 <= Y=5 true: executes "1 0" -> 10
-  assert.equal(disp(c), '10');
+  assert.equal(disp(c), '10.00');
   run(c, 'ENTER 2 ENTER 7 R/S'); runUntilHalt(c);            // X=7 <= Y=2 false: skips "1", runs "0" -> 0
-  assert.equal(disp(c), '0');
+  assert.equal(disp(c), '0.00');
 });
 test('PSE is honoured by tick and ignored by runUntilHalt', () => {
   const c = run(fresh(), 'P/R CLPRGM 1 PSE 2 P/R');
@@ -76,17 +77,71 @@ test('PSE is honoured by tick and ignored by runUntilHalt', () => {
   assert.equal(tick(c, 1500), true);
   assert.equal(c.state.prog.pc, 2);
   assert.equal(tick(c, 2000), false);                  // resumes, runs "2", ends
-  assert.equal(disp(c), '2');
+  assert.equal(disp(c), '2.00');
   const d = run(fresh(), 'P/R CLPRGM 1 PSE 2 P/R R/S');
   runUntilHalt(d);
-  assert.equal(disp(d), '2');
+  assert.equal(disp(d), '2.00');
 });
 test('R/S inside a program stops it; pc left after it', () => {
   const c = run(fresh(), 'P/R CLPRGM 1 R/S 2 P/R R/S');
   runUntilHalt(c);
   assert.equal(c.state.prog.running, false);
-  assert.equal(disp(c), '1');            // digit entry still open
+  assert.equal(disp(c), '1.00');         // halt terminated the digit entry
   assert.equal(c.state.prog.pc, 2);
+});
+test('a digit typed after a halted program starts a new number', () => {
+  const c = run(fresh(), 'P/R CLPRGM 1 0 R/S P/R R/S');
+  runUntilHalt(c);
+  assert.equal(disp(c), '10.00');
+  assert.equal(c.state.entry, null);
+  run(c, '2');
+  assert.equal(disp(c), '2');
+  assert.equal(c.y.toString(), '10');
+  const d = run(fresh(), 'P/R CLPRGM 1 0 P/R R/S');    // end of memory halt
+  runUntilHalt(d);
+  run(d, '2');
+  assert.equal(disp(d), '2');
+  const e = run(fresh(), 'P/R CLPRGM 1 0 GTO 000 P/R R/S');
+  runUntilHalt(e);
+  assert.equal(disp(e), '10.00');
+});
+test('run-mode GTO nnn then R/S starts at line nnn; GTO 000 starts at 001', () => {
+  const c = run(fresh(), 'P/R CLPRGM 1 0 P/R GTO 001 R/S');
+  runUntilHalt(c);
+  assert.equal(disp(c), '10.00');
+  const d = run(fresh(), 'P/R CLPRGM 7 ENTER 8 P/R GTO 002 R/S');
+  runUntilHalt(d);
+  assert.equal(d.x.toString(), '8'); assert.equal(d.y.toString(), '0');   // ENTER at 002 ran
+  assert.equal(disp(runHalt(run(fresh(), 'P/R CLPRGM 1 P/R GTO 000 R/S'))), '1.00');
+});
+test('run-mode GTO nnn then SST executes line nnn', () => {
+  const c = run(fresh(), 'P/R CLPRGM 1 2 P/R GTO 002');
+  c.press(32);
+  assert.equal(disp(c), '002,      2');
+  c.release();
+  assert.equal(disp(c), '2');
+});
+test('GTO beyond program memory gives Error 4 (recorded and executed)', () => {
+  const c = run(fresh(), 'P/R CLPRGM GTO 050');
+  assert.equal(disp(c), 'Error 4');
+  assert.equal(c.state.prog.lines.length, 0);
+  const d = run(fresh(), 'P/R CLPRGM 1 GTO 001 P/R');
+  d.state.prog.lines[1] = [43, 33, 200];               // corrupt target beyond memory
+  run(d, 'R/S'); runUntilHalt(d);
+  assert.equal(disp(d), 'Error 4');
+  assert.equal(d.state.prog.running, false);
+});
+test('tick respects its budget', () => {
+  const c = run(fresh(), 'P/R CLPRGM 1 GTO 001 P/R R/S');
+  assert.equal(tick(c, 0, 11), true);
+  assert.equal(c.state.prog.running, true);
+  assert.equal(c.state.prog.pc > 0, true);
+});
+test('program state survives a JSON round trip', () => {
+  const c = run(fresh(), 'P/R CLPRGM STO');
+  const p = JSON.parse(JSON.stringify(c.state.prog));
+  assert.deepEqual(Object.keys(p).sort(), Object.keys(c.state.prog).sort());
+  assert.deepEqual(p.rec, [44]);
 });
 test('an error halts the program and shows the error', () => {
   const c = run(fresh(), 'P/R CLPRGM 0 / P/R 5 R/S');
@@ -96,11 +151,11 @@ test('an error halts the program and shows the error', () => {
 });
 test('run-mode GTO and SST', () => {
   const c = run(fresh(), 'P/R CLPRGM 1 2 P/R GTO 001');
-  assert.equal(c.state.prog.pc, 1);
+  assert.equal(c.state.prog.pc, 0);      // next line executed is 001
   c.press(32);
-  assert.equal(disp(c), '002,      2');
+  assert.equal(disp(c), '001,      1');
   c.release();
-  assert.equal(disp(c), '2');
+  assert.equal(disp(c), '1');
 });
 test('memory beyond 260 lines converts registers (Error 6)', () => {
   const c = run(fresh(), 'P/R CLPRGM');
