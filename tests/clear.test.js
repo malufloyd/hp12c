@@ -36,3 +36,24 @@ test('undo after CLx and CLEAR REG', () => {
 test('undo only works right after the clear', () => {
   assert.equal(disp(run(fresh(), '42 CLx 5 UNDO')), '5');
 });
+
+test('CLEAR Σ zeroes the stack and keeps lastX', () => {
+  const c = run(fresh(), '3 ENTER 4 + 1 ENTER 2 ENTER 5 CLSIGMA');
+  assert.deepEqual(c.state.stack.map(String), ['0', '0', '0', '0']);
+  assert.equal(c.state.lastX.toString(), '4');
+});
+test('CLEAR REG also clears lastX, extended cash flows and Nj', () => {
+  const c = run(fresh(), '3 ENTER 4 +');
+  c.state.cfExt = [c.state.stack[0]]; c.state.nj[3] = 5;
+  run(c, 'CLREG');
+  assert.ok(c.state.lastX.isZero());
+  assert.equal(c.state.cfExt.length, 0);
+  assert.equal(c.state.nj[3], 1);
+});
+test('undo after CLEAR Σ and CLEAR FIN', () => {
+  assert.equal(disp(run(fresh(), '6 STO 2 CLSIGMA UNDO RCL 2')), '6.00');
+  assert.equal(disp(run(fresh(), '9 STO n CLFIN UNDO RCL n')), '9.00');
+});
+test('any other op invalidates undo', () => {
+  assert.equal(disp(run(fresh(), '42 CLx ENTER UNDO')), '0.00');
+});
