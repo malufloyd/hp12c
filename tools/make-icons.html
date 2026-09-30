@@ -1,0 +1,13 @@
+<!doctype html><meta charset="utf-8"><title>make-icons</title>
+<!-- Dev helper: renders icons/icon.svg to opaque PNG data URLs. Usage: window.render(size) -> Promise<dataURL>. Served over http (see sdd notes). -->
+<script>
+window.render = size => new Promise((res, rej) => {
+  const img = new Image();
+  img.onload = () => {
+    const c = document.createElement('canvas'); c.width = c.height = size;
+    const x = c.getContext('2d'); x.fillStyle = '#000'; x.fillRect(0, 0, size, size);
+    x.drawImage(img, 0, 0, size, size); res(c.toDataURL('image/png'));
+  };
+  img.onerror = rej; img.src = '../icons/icon.svg';
+});
+</script>

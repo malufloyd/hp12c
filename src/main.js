@@ -71,3 +71,4 @@ attachInput(view, { onDown: keyDown, onUp: keyUp });
 render();
 ensureLoop();
 window.__hp12c = { calc, view, press(code) { calc.press(code); calc.release(); afterKey(); } };
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
