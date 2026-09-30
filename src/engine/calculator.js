@@ -1,4 +1,4 @@
-import { D, normalize } from './number.js';
+import { D, ZERO, normalize } from './number.js';
 import { freshState } from './state.js';
 import { resolve } from './resolve.js';
 import { formatNumber, formatMantissa, formatEntry } from '../display.js';
@@ -82,6 +82,7 @@ export class Calculator {
   }
   editEntry({ entry, value }) {
     const s = this.state;
+    s.undo = null;                               // any entry key invalidates UNDO
     if (!s.entry) {
       if (entry === 'chs') return;
       if (s.lift) s.stack = [s.stack[0], s.stack[0], s.stack[1], s.stack[2]];
@@ -105,7 +106,10 @@ export class Calculator {
         break;
       case 'backspace':
         if (e.exp !== null) { e.exp = e.exp === '' ? null : e.exp.slice(0, -1); if (e.exp === null) e.expNeg = false; }
-        else e.mant = e.mant.slice(0, -1);
+        else {
+          e.mant = e.mant.slice(0, -1);
+          if (e.mant === '') { s.entry = null; s.stack[0] = ZERO; s.lift = false; return; }
+        }
         break;
     }
     s.stack[0] = this.entryValue(e);             // X tracks the entry live
