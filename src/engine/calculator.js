@@ -119,6 +119,7 @@ export class Calculator {
   press(code) {
     const s = this.state;
     if (s.off) return;
+    if (this.selfTestKey(code)) return;
     if (s.prog.running) { s.prog.running = false; s.prog.waitUntil = 0; this.endEntry(); return; }   // any key stops a program (swallowed)
     if (s.error !== null) { s.error = null; s.blink = false; return; }
     if (s.prog.prgmMode) { s.blink = false; s.showMantissa = false; s.dateDisplay = null; if (this.recordKey(code)) return; }
@@ -154,6 +155,7 @@ export class Calculator {
       s.error = e.code;
     }
   }
+  selfTestKey() { return false; }         // power.js: self-test key interception
   release() {
     this.state.showMantissa = false;
     this.onRelease();
@@ -163,7 +165,13 @@ export class Calculator {
   get display() {
     const s = this.state, m = s.mode;
     let text;
+    let ann = null, running = s.prog.running;
     if (s.off) text = '';
+    else if (s.selfTest) {
+      if (s.selfTest.phase === 'running') { text = 'running'; running = true; }
+      else { text = '-8,8,8,8,8,8,8,8,8,8,'; ann = { f: true, g: true, begin: true, dmy: true, c: true, prgm: true, rpn: true, alg: true, paren: true }; }
+    }
+    else if (s.kbTest && s.kbTest.done) text = '12';
     else if (s.error !== null) text = s.error === 'Pr' ? 'Pr Error' : 'Error ' + s.error;
     else if (s.prog.running && !s.prog.waitUntil) text = 'running';
     else if (s.showMantissa) text = formatMantissa(s.stack[0]);
@@ -173,12 +181,12 @@ export class Calculator {
     else text = formatNumber(s.stack[0], { fix: m.fix, sci: m.sci, commaDecimal: m.commaDecimal });
     return {
       text,
-      ann: {
+      ann: ann ?? {
         f: s.prefix === 'f', g: s.prefix === 'g' || s.prefix === 'RCLg',
         begin: m.begin, dmy: m.dmy, c: m.compound, prgm: s.prog.prgmMode,
         rpn: !m.alg, alg: m.alg, paren: s.alg.parens.length > 0,
       },
-      running: s.prog.running, blink: s.blink, off: s.off,
+      running, blink: s.blink, off: s.off,
     };
   }
 }

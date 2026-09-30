@@ -84,6 +84,11 @@ export function step(calc, now = null) {
 }
 
 export function tick(calc, nowMs, budgetSteps = 500) {
+  const st = calc.state.selfTest;
+  if (st) {                                                 // ON+x self-test timer (see power.js)
+    if (st.phase === 'running' && nowMs >= st.until) calc.state.selfTest = { phase: 'done' };
+    return st.phase === 'running';
+  }
   const p = calc.state.prog;
   if (!p.running) return false;
   if (p.waitUntil) { if (nowMs < p.waitUntil) return true; p.waitUntil = 0; }
