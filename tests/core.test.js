@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, run, disp, steps } from './helpers.js';
+import { Calculator } from '../src/engine/calculator.js';
 
 test('A1 checkbook (manual p.23)', () => steps(fresh(), [
   ['58.33 ENTER 22.95 -', '35.38'], ['13.7 -', '21.68'], ['10.14 -', '11.54'], ['1053 +', '1,064.54'],
@@ -73,7 +74,7 @@ test('CHS on result and during entry', () => {
   assert.equal(disp(run(fresh(), '5 ENTER CHS')), '-5.00');
 });
 test('unimplemented ops throw, never silently ignored', () => {
-  assert.throws(() => run(fresh(), '5 xw'), /op not implemented: xw/);
+  assert.throws(() => Calculator.run('__no_such_op__', fresh()), /op not implemented: __no_such_op__/);
 });
 
 // ---- Task 3 fix round 1 ----

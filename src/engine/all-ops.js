@@ -7,3 +7,4 @@ import './dates.js';
 import './finance.js';
 import './cashflow.js';
 import './depreciation.js';
+import './stats.js';
