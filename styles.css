@@ -1,5 +1,17 @@
-html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
-#app { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+html, body { margin: 0; width: 100%; height: 100%; background: #0b0b0b; overflow: hidden; overscroll-behavior: none;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: none; -webkit-tap-highlight-color: transparent; }
+/* Landscape: the stage fills the safe area; the SVG letterboxes itself (1280:790). */
+#stage { position: fixed; box-sizing: border-box; display: flex; align-items: center; justify-content: center;
+  left: env(safe-area-inset-left); right: env(safe-area-inset-right);
+  top: env(safe-area-inset-top); bottom: env(safe-area-inset-bottom); }
+/* Portrait: draw the whole calculator rotated 90deg (phone top / Dynamic Island on the left).
+   The stage is laid out landscape (width 100vh, height 100vw) around the viewport centre, then rotated. */
+@media (orientation: portrait) {
+  #stage { left: 50%; top: 50%; right: auto; bottom: auto;
+    width: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    height: calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right));
+    transform: translate(-50%, -50%) rotate(90deg); }
+}
 svg.calculator { width: 100%; height: 100%; display: block; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .lcd-blink { animation: lcd-flash 0.8s steps(1) infinite; }
 .lcd-running { animation: lcd-flash 1s steps(1) infinite; }

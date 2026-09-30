@@ -5,7 +5,7 @@ import { renderLcd } from './lcd.js';
 const NS = 'http://www.w3.org/2000/svg';
 const FONT = '"Helvetica Neue", Helvetica, Arial, sans-serif';
 const GOLD_LEG = '#e0a13c', BLUE_LEG = '#5fb0dc', CREAM = '#f2efe6';
-const KX0 = 45, KPITCH_X = 121, KY0 = 285, KPITCH_Y = 128, KW = 92, KH = 62, BAND = 18;
+const KX0 = 45, KPITCH_X = 121, KY0 = 285, KPITCH_Y = 128, KW = 92, KH = 62, BAND = 26;
 
 function el(tag, attrs = {}, parent, text) {
   const n = document.createElementNS(NS, tag);
@@ -119,7 +119,7 @@ function buildKey(keysLayer, k) {
   const isF = k.code === 42, isG = k.code === 43;
   const outer = el('g', { transform: `translate(${x},${y0})`, 'data-key': k.code }, keysLayer);
   // f-legend printed on the panel (does not move)
-  if (k.f && !isF && !isG) el('text', { x: KW / 2, y: -12, 'text-anchor': 'middle', 'font-size': 15, 'font-weight': 700,
+  if (k.f && !isF && !isG) el('text', { x: KW / 2, y: -13, 'text-anchor': 'middle', 'font-size': Math.min(18, 112 / (k.f.length * 0.62)), 'font-weight': 700,
     'font-family': FONT, fill: GOLD_LEG }, outer, k.f);
   // well
   el('rect', { x: -5, y: -5, width: KW + 10, height: h + 10, rx: 11, fill: '#070706', stroke: '#2b2823', 'stroke-width': 1.5 }, outer);
@@ -137,7 +137,7 @@ function buildKey(keysLayer, k) {
   }
   el('rect', { x: 0.5, y: 0.5, width: KW - 1, height: h - 1, rx: 7.5, fill: 'none', stroke: '#000', 'stroke-opacity': 0.5 }, g);
   primaryText(g, k, KW, h);
-  if (k.g && !isG) el('text', { x: KW / 2, y: h - 4.5, 'text-anchor': 'middle', 'font-size': 14, 'font-weight': 700,
+  if (k.g && !isG) el('text', { x: KW / 2, y: h - 7, 'text-anchor': 'middle', 'font-size': 21, 'font-weight': 700,
     'font-style': 'italic', 'font-family': FONT, fill: BLUE_LEG }, g, k.g);
   el('rect', { class: 'shade', x: 0, y: 0, width: KW, height: h + 3, rx: 8, fill: '#000', opacity: 0, 'pointer-events': 'none' }, g);
   return { g, h, x, y: y0 };
