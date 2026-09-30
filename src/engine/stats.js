@@ -66,6 +66,6 @@ Calculator.register({
   xw(c) {
     const { sx, sxy } = sums(c);
     if (sx.isZero()) throw E2();
-    c.unary(() => sxy.div(sx));
+    c.push(sxy.div(sx));                // like x̄: a new result, the stack lifts
   },
 });

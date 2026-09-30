@@ -26,3 +26,9 @@ test('stat errors', () => {
 test('Σ- removes a point', () => {
   assert.equal(disp(run(fresh(), 'CLSIGMA 1 ENTER 2 Σ+ 3 ENTER 4 Σ+ 3 ENTER 4 Σ- xbar')), '2.00');
 });
+test('x̄w is a new result: lifts the stack unless lift is disabled', () => {
+  const c = run(fresh(), 'CLSIGMA 1.16 ENTER 15 Σ+ 1.24 ENTER 7 Σ+ xw');
+  assert.equal(disp(run(c, 'x<>y')), '1.24');            // Σ+ disabled lift: n was overwritten
+  const d = run(fresh(), 'CLSIGMA 1.16 ENTER 15 Σ+ 1.24 ENTER 7 Σ+ 5 ENTER 6 + xw');
+  assert.equal(disp(run(d, 'x<>y')), '11.00');           // lift enabled: 11 moved to Y
+});
