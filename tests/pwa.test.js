@@ -14,3 +14,11 @@ test('every tracked app file is precached', () => {
   const tracked = execFileSync('git', ['ls-files', 'src', 'vendor', 'index.html', 'styles.css', 'manifest.webmanifest'], { cwd: root, encoding: 'utf8' }).split('\n').filter(Boolean);
   for (const f of tracked) assert.ok(list.includes(f), `missing from PRECACHE: ${f}`);
 });
+
+import { computeVersion, currentVersion } from '../tools/stamp-sw.mjs';
+test('sw.js VERSION matches the precached files (run `npm run stamp` after changing them)', () => {
+  assert.equal(currentVersion(), computeVersion());
+});
+test('precache bypasses the HTTP cache', () => {
+  assert.match(sw, /new Request\(u, \{ cache: 'reload' \}\)/);
+});

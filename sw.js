@@ -1,5 +1,6 @@
-// Bump VERSION on every deploy so clients drop the old cache and fetch the new files.
-const VERSION = 'v1';
+// VERSION is stamped automatically from the precached files' contents: run `npm run stamp` before every deploy
+// (tests fail when it is stale).
+const VERSION = 'vdb6267499e';
 const CACHE = `hp12c-${VERSION}`;
 const PRECACHE = [
   './',
@@ -39,7 +40,7 @@ const PRECACHE = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(PRECACHE.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {
