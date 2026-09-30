@@ -1,6 +1,6 @@
 // VERSION is stamped automatically from the precached files' contents: run `npm run stamp` before every deploy
 // (tests fail when it is stale).
-const VERSION = 'vdb6267499e';
+const VERSION = 'v9fc8454040';
 const CACHE = `hp12c-${VERSION}`;
 const PRECACHE = [
   './',
@@ -30,6 +30,7 @@ const PRECACHE = [
   'src/main.js',
   'src/storage.js',
   'src/ui/calculator-view.js',
+  'src/ui/geometry.js',
   'src/ui/input.js',
   'src/ui/lcd.js',
   'src/ui/sound.js',

@@ -1,11 +1,12 @@
 // Builds the whole HP 12C Gold SVG once; update() only redraws the LCD.
 import { LAYOUT, BRACKETS } from '../engine/keys.js';
 import { renderLcd } from './lcd.js';
+import { KPITCH_Y, KW, KH, keyX, keyY, clientToViewBox, cellAt } from './geometry.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const FONT = '"Helvetica Neue", Helvetica, Arial, sans-serif';
 const GOLD_LEG = '#e0a13c', BLUE_LEG = '#5fb0dc', CREAM = '#f2efe6';
-const KX0 = 45, KPITCH_X = 121, KY0 = 285, KPITCH_Y = 128, KW = 92, KH = 62, BAND = 26;
+const BAND = 26;
 
 function el(tag, attrs = {}, parent, text) {
   const n = document.createElementNS(NS, tag);
@@ -14,8 +15,6 @@ function el(tag, attrs = {}, parent, text) {
   if (parent) parent.appendChild(n);
   return n;
 }
-const keyX = col => KX0 + (col - 1) * KPITCH_X;
-const keyY = row => KY0 + (row - 1) * KPITCH_Y;
 
 function defs(svg) {
   const d = el('defs', {}, svg);
@@ -155,20 +154,12 @@ export function createCalculatorView(container) {
   for (const k of LAYOUT) keys.set(k.code, { ...buildKey(keysLayer, k), k });
   container.appendChild(svg);
 
-  // Hit cells tile the keyboard: key plus margin (room above for its legend).
-  const cells = LAYOUT.map(k => {
-    const x = keyX(k.col), y = keyY(k.row);
-    return { code: k.code, x0: x - 14.5, x1: x + KW + 14.5, y0: y - 44, y1: y + KH + (k.rows - 1) * KPITCH_Y + 22 };
-  });
-
   return {
     svg,
     keyAt(clientX, clientY) {
-      const m = svg.getScreenCTM();
-      if (!m) return null;
-      const p = new DOMPoint(clientX, clientY).matrixTransform(m.inverse());
-      for (const c of cells) if (p.x >= c.x0 && p.x < c.x1 && p.y >= c.y0 && p.y < c.y1) return c.code;
-      return null;
+      const portrait = !!(window.matchMedia && matchMedia('(orientation: portrait)').matches);
+      const p = clientToViewBox(svg.getBoundingClientRect(), portrait, clientX, clientY);
+      return cellAt(p.x, p.y);
     },
     setPressed(code, pressed) {
       const e = keys.get(code);
