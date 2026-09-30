@@ -6,3 +6,4 @@ import './alg.js';   // must come after ops-basic.js / mathfn.js (wraps their ha
 import './dates.js';
 import './finance.js';
 import './cashflow.js';
+import './depreciation.js';
