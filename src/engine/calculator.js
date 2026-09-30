@@ -120,7 +120,7 @@ export class Calculator {
     const s = this.state;
     if (s.off) return;
     if (s.error !== null) { s.error = null; s.blink = false; return; }
-    s.blink = false; s.showMantissa = false;
+    s.blink = false; s.showMantissa = false; s.dateDisplay = null;
     if (s.prog.prgmMode && this.recordKey(code)) return;
     const action = resolve(this, code);
     if (!action) return;
@@ -156,6 +156,7 @@ export class Calculator {
     if (s.off) text = '';
     else if (s.error !== null) text = s.error === 'Pr' ? 'Pr Error' : 'Error ' + s.error;
     else if (s.showMantissa) text = formatMantissa(s.stack[0]);
+    else if (s.dateDisplay) text = s.dateDisplay;
     else if (s.prog.prgmMode && this.programText() !== null) text = this.programText();
     else if (s.entry) text = formatEntry(s.entry, m.commaDecimal);
     else text = formatNumber(s.stack[0], { fix: m.fix, sci: m.sci, commaDecimal: m.commaDecimal });

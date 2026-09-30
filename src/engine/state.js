@@ -14,7 +14,7 @@ export function freshState() {
     prefix: null,   // null|'f'|'g'|'STO'|'RCL'|'STO.'|'RCL.'|'STO+'|'STO-'|'STO*'|'STO/' (+'.' variants)|'RCLg'|'GTO'|'GTO.'
     prefixBuf: '',                              // digits collected after g GTO / g GTO .
     error: null,                                // number 0-9 or 'Pr'
-    blink: false, off: false, showMantissa: false,
+    blink: false, off: false, showMantissa: false, dateDisplay: null,
     cfExt: [], nj: Array(81).fill(1),
     alg: freshAlg(),
     undo: null,
