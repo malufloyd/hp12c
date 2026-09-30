@@ -7,6 +7,7 @@ function setup(c) {
   if (!n.isInteger() || n.lte(0) || !j.isInteger() || j.lte(0)) throw new CalcError(5);
   return { s, L: n.toNumber(), j: j.toNumber(), i, sbv: pv, sal: fv, d: c.dispDecimals(), jx: j };
 }
+const MAX_YEARS = 99999;                  // same policy as AMORT's cap: more iterations -> Error 5
 const rnd = (v, d) => v.toDecimalPlaces(d, D.ROUND_HALF_UP);
 
 function finish({ s, jx }, dpn, rdv, c) {
@@ -26,6 +27,7 @@ Calculator.register({
   soyd(c) {
     const p = setup(c), { L, j, sbv, sal, d } = p;
     if (j > L) return finish(p, ZERO, ZERO, c);
+    if (j > MAX_YEARS) throw new CalcError(5);
     const dep = sbv.minus(sal), sum = L * (L + 1) / 2;
     let rdv = dep, dpn = ZERO;
     for (let k = 1; k <= j; k++) {
@@ -37,12 +39,15 @@ Calculator.register({
   db(c) {
     const p = setup(c), { L, j, i, sbv, sal, d } = p;
     if (j > L) return finish(p, ZERO, ZERO, c);
+    if (j > MAX_YEARS) throw new CalcError(5);
     let rbv = sbv, dpn = ZERO;
     for (let k = 1; k <= j; k++) {
+      if (rbv.lte(sal)) { dpn = ZERO; break; }          // book value reached salvage: nothing left to depreciate
       dpn = rnd(rbv.times(i).div(100 * L), d);
       const cap = rbv.minus(sal);
       if (dpn.gt(cap)) dpn = cap;
       if (dpn.isNeg()) dpn = ZERO;
+      if (dpn.isZero()) break;                          // rbv no longer changes, so later years are 0 too
       rbv = rbv.minus(dpn);
     }
     finish(p, dpn, rbv.minus(sal), c);

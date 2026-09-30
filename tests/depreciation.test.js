@@ -21,3 +21,22 @@ test('depreciation beyond life is zero; lastX = j', () => {
   assert.equal(disp(run(c, 'x<>y')), '0.00');
   assert.equal(disp(run(setup(), '2 SOYD LSTx')), '2.00');
 });
+
+test('I5: SOYD/DB with huge life and year return promptly (Error 5, no hang)', () => {
+  for (const fn of ['SOYD', 'DB']) {
+    const c = run(fresh(), `CLFIN 10000 PV 500 FV 603609912 n 200 i 603609912 ${fn}`);
+    assert.equal(disp(c), 'Error 5', fn);
+  }
+  const t0 = Date.now();
+  assert.equal(disp(run(fresh(), 'CLFIN 10000 PV 500 FV 100000 n 10 i 100000 SOYD')), 'Error 5');
+  assert.ok(Date.now() - t0 < 1000);
+});
+test('I5: year just under the cap still computes; DB stops once salvage is reached', () => {
+  const t0 = Date.now();
+  const c = run(fresh(), 'CLFIN 10000 PV 500 FV 99999 n 1000000 i 99999 DB');
+  assert.notEqual(disp(c), 'Error 5');
+  assert.equal(disp(c), '0.00');                              // long since depreciated down to salvage
+  assert.equal(disp(run(c, 'x<>y')), '0.00');                 // remaining depreciable value = 0
+  assert.ok(Date.now() - t0 < 1000);
+  assert.notEqual(disp(run(fresh(), 'CLFIN 10000 PV 500 FV 99999 n 10 i 99999 SOYD')), 'Error 5');
+});
