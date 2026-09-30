@@ -43,7 +43,7 @@ src/
     keys.js              tabela de teclas: código (linha/coluna, ex.: 11 = n), legendas primária/f/g
     calculator.js        máquina de estados: pilha X/Y/Z/T, LSTx, stack lift, prefixos f/g/STO/RCL/GTO,
                          entrada de dígitos, modos, registradores, undo, backspace, erros
-    alg.js               modo algébrico: operações pendentes, precedência, parênteses (até 13)
+    alg.js               modo algébrico: cálculo em cadeia da esquerda para a direita (sem precedência, como a Platinum), parênteses (até 13)
     finance.js           TVM (incluindo período fracionário simples/composto), AMORT, NPV, IRR, CFo/CFj/Nj,
                          PRICE/YTM, SL/SOYD/DB, INT, 12x, 12÷
     dates.js             DATE, ΔDYS (real e 30/360), D.MY/M.DY
@@ -91,7 +91,7 @@ A referência completa está em `docs/reference/platinum-reference.md`. Resumo:
   - x² = `g ×`, LSTx = `g +`;
   - "=" é a legenda azul do ENTER, e OFF fica acima do ON.
 - **RPN:** pilha de 4 níveis, com as regras de stack lift do manual. ENTER, CLx, Σ+ e Σ− desabilitam o lift; operações de dois números derrubam a pilha e duplicam T.
-- **ALG:** o próprio ENTER funciona como "=", e `g ENTER` também. Há precedência e até 13 parênteses abertos (o 14º dá Error 4).
+- **ALG:** o próprio ENTER funciona como "=", e `g ENTER` também. Não há precedência: a conta é feita em cadeia, da esquerda para a direita (456 − 75 ÷ 18,5 × 68 ÷ 1,9 = 737,07, como no manual). Há até 13 parênteses abertos (o 14º dá Error 4).
 - **Display:** 10 dígitos. `f 0`–`f 9` define FIX (com 9 pedido, mostra 8 casas). `f .` define SCI, com mantissa de 7 dígitos e expoente de 2. O display troca sozinho para notação científica quando o número não cabe. `f PREFIX` mostra os 10 dígitos da mantissa enquanto a tecla está pressionada.
 - **Indicadores:** f, g, BEGIN, D.MY, C, PRGM, RPN/ALG e `( )`.
 - **Memória de programa:** no reset são 8 linhas e 20 registradores. Cada registrador, a partir de R.9 para baixo, vira 7 linhas quando o programa cresce, até 400 linhas. `g MEM` mostra `P-08 r-20` no reset. Os fluxos de caixa (CF0..CF80) ocupam a mesma memória.
@@ -145,7 +145,7 @@ Se o usuário tiver uma Platinum física, esses são os pontos a conferir.
 
 - **Motor (Node, `node --test`):**
   - todos os exemplos da seção 5 da referência, no formato "sequência de teclas → texto do display";
-  - testes de stack lift, de FIX/SCI/PREFIX, de separadores, de cada condição de Error, de ALG com precedência e parênteses, de undo/backspace, de gravação/execução/listagem de programa e da conversão de memória;
+  - testes de stack lift, de FIX/SCI/PREFIX, de separadores, de cada condição de Error, de ALG em cadeia e com parênteses, de undo/backspace, de gravação/execução/listagem de programa e da conversão de memória;
   - ida e volta do estado pela serialização.
   - Os exemplos marcados [CALC] na referência (calculados pelo pesquisador, não impressos no manual) são conferidos de forma independente antes de virarem teste.
 - **Visual:** screenshots via Playwright num viewport de iPhone deitado e em retrato (para conferir a rotação), comparados às fotos de referência.
