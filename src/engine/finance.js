@@ -85,3 +85,26 @@ Calculator.register({
     c.push(base.div(365)); c.push(pv.neg()); c.push(base.div(360));
   },
 });
+
+// f AMORT: X = payments to amortize. Leaves X = interest, Y = principal, Z = k, T = old Y.
+function amort(c) {
+  const s = c.state, k = c.x;
+  if (!k.isInteger() || k.lte(0) || s.fin.i.lte(-100)) throw E5();
+  const d = c.dispDecimals(), r = s.fin.i.div(HUNDRED);
+  const rd = v => v.toDecimalPlaces(d, D.ROUND_HALF_UP);
+  const pmt = rd(s.fin.pmt), sign = pmt.isNeg() ? -1 : 1;
+  let bal = s.fin.pv, n = s.fin.n, totInt = ZERO, totPrn = ZERO;
+  for (let j = 0; k.gt(j); j++) {
+    const first = n.isZero() && s.mode.begin;
+    const int = first ? ZERO : rd(bal.times(r).abs()).times(sign);
+    const prn = pmt.minus(int);
+    bal = bal.plus(prn); totInt = totInt.plus(int); totPrn = totPrn.plus(prn);
+    n = n.plus(1);
+  }
+  s.fin.n = c.fit(n); s.fin.pv = c.fit(bal);
+  const oldY = s.stack[1];
+  s.lastX = k;
+  s.stack = [c.fit(totInt), c.fit(totPrn), k, oldY];
+  s.lift = true; s.finStored = false;
+}
+Calculator.register({ amort });
