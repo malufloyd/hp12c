@@ -90,14 +90,14 @@ test('GTO digit buffer lives in state and needs 3 digits', () => {
   assert.equal(c.state.prefix, 'GTO');
   c.press(1); c.press(2);
   assert.equal(c.state.prefix, 'GTO'); assert.equal(c.state.prefixBuf, '12');
-  assert.throws(() => c.press(3), /op not implemented: gto/);
+  c.press(3);   // gto implemented in Task 14 (line 123 > allotted -> Error 4)
   assert.equal(c.state.prefix, null); assert.equal(c.state.prefixBuf, '');
   const d = fresh();
   d.press(43); d.press(33); d.press(48);
   assert.equal(d.state.prefix, 'GTO.');
   d.press(0); d.press(0);
   assert.equal(d.state.prefix, 'GTO.');
-  assert.throws(() => d.press(5), /op not implemented: gto/);
+  d.press(5);
 });
 test('STO EEX toggles the c annunciator', () => {
   const c = run(fresh(), 'STO EEX');

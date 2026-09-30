@@ -119,11 +119,21 @@ export class Calculator {
   press(code) {
     const s = this.state;
     if (s.off) return;
+    if (s.prog.running) { s.prog.running = false; s.prog.waitUntil = 0; return; }   // any key stops a program (swallowed)
+    if (s.error !== null) { s.error = null; s.blink = false; return; }
+    if (s.prog.prgmMode) { s.blink = false; s.showMantissa = false; s.dateDisplay = null; if (this.recordKey(code)) return; }
+    this.dispatch(code);
+  }
+  // The normal (non-recording) key path; running programs replay their key codes through it.
+  dispatch(code) {
+    const s = this.state;
     if (s.error !== null) { s.error = null; s.blink = false; return; }
     s.blink = false; s.showMantissa = false; s.dateDisplay = null;
-    if (s.prog.prgmMode && this.recordKey(code)) return;
     const action = resolve(this, code);
-    if (!action) return;
+    if (action) this.perform(action);
+  }
+  perform(action) {
+    const s = this.state;
     if (action.entry) {
       if (action.entry !== 'chs' || s.entry) return this.editEntry(action);   // chs with no entry runs as an op
     }
@@ -155,6 +165,7 @@ export class Calculator {
     let text;
     if (s.off) text = '';
     else if (s.error !== null) text = s.error === 'Pr' ? 'Pr Error' : 'Error ' + s.error;
+    else if (s.prog.running && !s.prog.waitUntil) text = 'running';
     else if (s.showMantissa) text = formatMantissa(s.stack[0]);
     else if (s.dateDisplay) text = s.dateDisplay;
     else if (s.prog.prgmMode && this.programText() !== null) text = this.programText();
