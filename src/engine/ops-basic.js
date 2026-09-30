@@ -15,8 +15,6 @@ function checkReg(calc, r) {
   if (typeof r === 'number' && r >= calc.availableRegs()) throw new CalcError(6);
 }
 
-function finStore(c, k) { const s = c.state; s.fin[k] = c.x; s.finStored = true; s.lift = true; }
-
 Calculator.register({
   add: c => c.binary(ARITH.add),
   sub: c => c.binary(ARITH.sub),
@@ -62,9 +60,6 @@ Calculator.register({
     if (s.blink) { s.blink = false; throw new CalcError(1); }
     s.regs[r] = ov; s.lift = true;
   },
-  // Placeholder (Task 7 replaces these with the real TVM ops): store X into the financial register.
-  n: c => finStore(c, 'n'), i: c => finStore(c, 'i'), pv: c => finStore(c, 'pv'),
-  pmt: c => finStore(c, 'pmt'), fv: c => finStore(c, 'fv'),
   compound(c) { c.state.mode.compound = !c.state.mode.compound; },
 
   fix(c, n) { c.state.mode.fix = n; c.state.mode.sci = false; },
