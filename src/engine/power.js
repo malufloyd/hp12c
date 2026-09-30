@@ -1,5 +1,5 @@
 // Power, ON+key combinations, self-tests and JSON (de)serialization of the whole calculator.
-import { Calculator } from './calculator.js';
+import { Calculator, cloneState } from './calculator.js';
 import { D } from './number.js';
 import { freshState } from './state.js';
 import { LAYOUT, K } from './keys.js';
@@ -29,7 +29,7 @@ Object.assign(Calculator.prototype, {
     }
   },
 
-  onCombo(code, now = Date.now()) {
+  onCombo(code, now = 0) {
     const s = this.state;
     s.off = false; s.selfTest = null; s.kbTest = null;
     if (code === 48) s.mode.commaDecimal = !s.mode.commaDecimal;
@@ -58,12 +58,17 @@ Object.assign(Calculator.prototype, {
   serialize() { return JSON.stringify({ v: 1, state: encode(this.state) }); },
 });
 
+// Tolerant, forward-compatible loader: start from freshState(), keep every known key whose saved value
+// has a compatible type/shape, ignore unknown keys, default missing/incompatible ones. Only unparsable
+// JSON or a wrong version/top-level shape is fatal.
 Calculator.deserialize = function (str) {
   let obj;
   try { obj = JSON.parse(str); } catch { throw new Error('unparsable state'); }
-  if (!obj || typeof obj !== 'object' || obj.v !== 1 || Object.keys(obj).length !== 2) throw new Error('bad version');
-  const state = decode(obj.state);
-  validate(state, freshState(), 'state');
+  if (!isPlainObj(obj) || obj.v !== 1 || !isPlainObj(obj.state)) throw new Error('bad version');
+  const state = coerce(decode(obj.state), freshState(), 'state');
+  // selfTest deadlines and PSE waits belong to the previous page's clock (performance.now): drop them.
+  if (state.selfTest && state.selfTest.phase === 'running') state.selfTest = null;
+  state.prog.waitUntil = 0;
   return new Calculator(state);
 };
 
@@ -91,49 +96,51 @@ function decode(v) {
 }
 
 const isPlain = v => v !== null && typeof v === 'object' && !Array.isArray(v) && !(v instanceof D);
+const isPlainObj = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 
-// Structural check against a template (freshState shape). A null template accepts null or any value
-// (entry, prefix, error, undo, ...), refined below.
-function validate(v, t, path) {
+// Returns a value shaped like template t built from saved value v; throws when v is incompatible with t.
+// Plain objects merge per key: missing or incompatible known keys fall back to the default, unknown keys drop.
+function coerce(v, t, path) {
   const bad = () => { throw new Error('invalid state at ' + path); };
-  if (t instanceof D) { if (!(v instanceof D)) bad(); return; }
+  if (t instanceof D) { if (!(v instanceof D)) bad(); return v; }
   if (Array.isArray(t)) {
     if (!Array.isArray(v)) bad();
     if (t.length) {
       if (v.length !== t.length) bad();
-      v.forEach((x, i) => validate(x, t[0], path + '[' + i + ']'));
+      return v.map((x, i) => coerce(x, t[0], path + '[' + i + ']'));
     }
-    return;
+    return v;
   }
   if (isPlain(t)) {
     if (!isPlain(v)) bad();
-    const tk = Object.keys(t), vk = Object.keys(v);
-    if (tk.length !== vk.length || !tk.every(k => k in v)) bad();
-    for (const k of tk) validate(v[k], t[k], path + '.' + k);
-    return;
+    const out = {};
+    for (const k of Object.keys(t)) {
+      if (k in v) { try { out[k] = coerce(v[k], t[k], path + '.' + k); continue; } catch { /* use default */ } }
+      out[k] = cloneState(t[k]);
+    }
+    return out;
   }
-  if (t === null) { validateNullable(v, path, bad); return; }
+  if (t === null) return coerceNullable(v, path, bad);
   if (typeof v !== typeof t) bad();
+  return v;
 }
 
-function validateNullable(v, path, bad) {
-  if (v === null) return;
+function coerceNullable(v, path, bad) {
+  if (v === null) return null;
   switch (path.replace(/^state\.undo\./, 'state.')) {
-    case 'state.undo': validate(v, freshState(), 'state.undo'); if (v.undo !== null) bad(); return;
-    case 'state.prefix': if (typeof v !== 'string') bad(); return;
-    case 'state.error': if (!(Number.isInteger(v) && v >= 0 && v <= 9) && v !== 'Pr') bad(); return;
-    case 'state.dateDisplay': if (typeof v !== 'string') bad(); return;
-    case 'state.entry':
-      validate(v, { mant: '', exp: null, expNeg: false, neg: false }, path); return;
-    case 'state.entry.exp': if (typeof v !== 'string') bad(); return;
-    case 'state.alg.acc': if (!(v instanceof D)) bad(); return;
-    case 'state.alg.op': if (typeof v !== 'string') bad(); return;
+    case 'state.undo': { const u = coerce(v, freshState(), 'state.undo'); u.undo = null; return u; }
+    case 'state.prefix': if (typeof v !== 'string') bad(); return v;
+    case 'state.error': if (!(Number.isInteger(v) && v >= 0 && v <= 9) && v !== 'Pr') bad(); return v;
+    case 'state.dateDisplay': if (typeof v !== 'string') bad(); return v;
+    case 'state.entry': return coerce(v, { mant: '', exp: null, expNeg: false, neg: false }, path);
+    case 'state.entry.exp': if (typeof v !== 'string') bad(); return v;
+    case 'state.alg.acc': if (!(v instanceof D)) bad(); return v;
+    case 'state.alg.op': if (typeof v !== 'string') bad(); return v;
     case 'state.selfTest':
       if (!isPlain(v) || (v.phase !== 'running' && v.phase !== 'done')) bad();
       if (v.phase === 'running' && typeof v.until !== 'number') bad();
-      return;
-    case 'state.kbTest':
-      validate(v, { idx: 0, done: false }, path); return;
+      return v;
+    case 'state.kbTest': return coerce(v, { idx: 0, done: false }, path);
     default: bad();
   }
 }

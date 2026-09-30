@@ -57,17 +57,66 @@ test('serialize round trip: program, open paren, undo snapshot, cfExt', () => {
   assert.ok(d.state.alg.parens.length > 0);
   assert.equal(d.state.prog.lines.length, 2);
 });
-test('deserialize rejects garbage and other versions', () => {
-  const good = JSON.parse(fresh().serialize());
+test('deserialize rejects unparsable data and wrong version/shape', () => {
+  assert.throws(() => Calculator.deserialize('{garbage'));
   assert.throws(() => Calculator.deserialize('{"v":2,"state":{}}'));
   assert.throws(() => Calculator.deserialize('[1]'));
-  const bad = JSON.parse(fresh().serialize()); bad.state.regs.pop();
-  assert.throws(() => Calculator.deserialize(JSON.stringify(bad)));
-  const bad2 = JSON.parse(fresh().serialize()); bad2.state.fix = 1; delete bad2.state.mode;
-  assert.throws(() => Calculator.deserialize(JSON.stringify(bad2)));
-  const bad3 = JSON.parse(fresh().serialize()); bad3.state.stack[0] = 5;
-  assert.throws(() => Calculator.deserialize(JSON.stringify(bad3)));
-  assert.ok(good.v === 1);
+  assert.throws(() => Calculator.deserialize('{"v":1}'));
+  assert.throws(() => Calculator.deserialize('{"v":1,"state":[]}'));
+});
+test('deserialize keeps compatible fields and defaults incompatible ones', () => {
+  const c = run(fresh(), '7 STO 2');
+  const o = JSON.parse(c.serialize());
+  o.state.regs.pop();                                        // wrong length -> default regs
+  o.state.stack[0] = 5;                                      // wrong type -> default stack
+  const d = Calculator.deserialize(JSON.stringify(o));
+  assert.equal(disp(run(d, 'RCL 2')), '0.00');
+  assert.equal(d.state.fin.n.toString(), '0');
+});
+test('IRR then save/load keeps registers (C1)', () => {
+  const c = run(fresh(), '100 CHS CFo 60 CFj 60 CFj IRR 42 STO 3');
+  assert.equal(c.state.flashRunning, true);
+  c.state.flashRunning = false;                              // the UI clears it on render
+  const s = mem(); save(s, c);
+  const d = load(s);
+  assert.notEqual(disp(d), 'Pr Error');
+  assert.equal(disp(run(d, 'RCL 3')), '42.00');
+  assert.equal(d.state.fin.i.toFixed(2), '13.07');
+  // even with the flash still pending it must round-trip
+  const c2 = run(fresh(), '100 CHS CFo 60 CFj 60 CFj IRR');
+  const d2 = Calculator.deserialize(c2.serialize());
+  assert.equal(d2.state.fin.i.toFixed(2), '13.07');
+});
+test('every state key written by ops exists in freshState (shape is stable)', () => {
+  const keys = k => Object.keys(k).sort().join();
+  const base = keys(fresh().state);
+  for (const seq of ['100 CHS CFo 60 CFj 60 CFj IRR', '5 ENTER 2 +', 'f 4 g 6', '1 CHS 6 n 10 i 5 PV FV',
+    '12.012004 ENTER 12.012005 DDYS', 'g (', 'ALG 2 + 3 =', 'P/R 1 + P/R']) {
+    assert.equal(keys(run(fresh(), seq).state), base, seq);
+  }
+});
+test('saved state with a missing key or an extra key loads fine', () => {
+  const c = run(fresh(), '9 STO 4 f 4');
+  const o = JSON.parse(c.serialize());
+  delete o.state.flashRunning; delete o.state.prog.sstPending; delete o.state.mode.compound;
+  o.state.futureField = { a: 1 }; o.state.mode.newMode = true; o.extraTop = 1;
+  const d = Calculator.deserialize(JSON.stringify(o));
+  assert.equal(disp(run(d, 'RCL 4')), '9.0000');
+  assert.equal(d.state.flashRunning, false);
+  assert.equal(d.state.prog.sstPending, false);
+  assert.equal(d.state.mode.compound, false);
+  assert.equal('futureField' in d.state, false);
+});
+test('garbage in storage: Pr Error, raw copied to the backup key', () => {
+  const s = mem();
+  s.setItem('hp12c.state.v1', '{garbage');
+  assert.equal(disp(load(s)), 'Pr Error');
+  assert.equal(s.getItem('hp12c.state.bad'), '{garbage');
+  const s2 = mem(); s2.setItem('hp12c.state.v1', '{"v":7,"state":{}}');
+  assert.equal(disp(load(s2)), 'Pr Error');
+  assert.equal(s2.getItem('hp12c.state.bad'), '{"v":7,"state":{}}');
+  const t = { getItem: () => '{x', setItem() { throw new Error('quota'); } };
+  assert.equal(disp(load(t)), 'Pr Error');                   // backup failure must not throw
 });
 test('storage tolerates throwing storage', () => {
   const t = { getItem() { throw new Error('x'); }, setItem() { throw new Error('x'); } };
@@ -96,3 +145,18 @@ test('power off stops program and clears error/prefix', () => {
   assert.equal(c.state.error, null); assert.equal(c.state.prefix, null);
 });
 
+
+test('self-test finishes with one clock (I1)', () => {
+  const c = fresh(), t0 = 123456.7;                          // rAF-style timestamps, not epoch ms
+  c.onCombo(20, t0);
+  assert.equal(disp(c), 'running');
+  assert.equal(tick(c, t0 + 100), true);
+  assert.equal(tick(c, t0 + 2600), false);
+  assert.equal(disp(c), '-8,8,8,8,8,8,8,8,8,8,');
+});
+test('a persisted running self-test or PSE wait does not survive a reload', () => {
+  const c = fresh(); c.onCombo(20, 5000);
+  assert.equal(Calculator.deserialize(c.serialize()).state.selfTest, null);
+  const d = fresh(); d.state.prog.running = true; d.state.prog.waitUntil = 9e9;
+  assert.equal(Calculator.deserialize(d.serialize()).state.prog.waitUntil, 0);
+});

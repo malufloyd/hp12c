@@ -11,13 +11,16 @@ const view = createCalculatorView(document.getElementById('stage'));
 
 let overlay = null, overlayTimer = 0, flashUntil = 0, raf = 0;
 
+let flashTimer = 0;
 function render() {
   const d = calc.display;
   const s = calc.state;
   if (s.flashRunning) {                       // show "running" ~400 ms after IRR/YTM, then clear the flag
     if (!flashUntil) flashUntil = performance.now() + 400;
-    if (performance.now() < flashUntil) { d.text = 'running'; d.running = true; setTimeout(render, 420 - 0); }
-    else { s.flashRunning = false; flashUntil = 0; }
+    if (performance.now() < flashUntil) {
+      d.text = 'running'; d.running = true;
+      if (!flashTimer) flashTimer = setTimeout(() => { flashTimer = 0; render(); }, 420);
+    } else { s.flashRunning = false; flashUntil = 0; persist(); }
   }
   view.update(overlay ? { ...d, text: overlay, running: false } : d);
 }
@@ -55,7 +58,7 @@ function keyDown(code, e) {
       }, HOLD_MS) };
     return;
   }
-  if (onDown) { onDown.combo = true; clearTimeout(onDown.timer); calc.onCombo(code); afterKey(); return; }
+  if (onDown) { onDown.combo = true; clearTimeout(onDown.timer); calc.onCombo(code, performance.now()); afterKey(); return; }
   calc.press(code); afterKey();
 }
 function keyUp(code, e) {

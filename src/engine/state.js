@@ -1,6 +1,6 @@
 import { ZERO } from './number.js';
 
-export const freshAlg = () => ({ acc: null, op: null, parens: [] });
+export const freshAlg = () => ({ acc: null, op: null, parens: [], opJust: false });
 
 export function freshState() {
   return {
@@ -15,6 +15,7 @@ export function freshState() {
     prefixBuf: '',                              // digits collected after g GTO / g GTO .
     error: null,                                // number 0-9 or 'Pr'
     blink: false, off: false, showMantissa: false, dateDisplay: null,
+    flashRunning: false,                        // brief 'running' flash after IRR/YTM (cleared by the UI)
     cfExt: [], nj: Array(81).fill(1),
     alg: freshAlg(),
     undo: null,

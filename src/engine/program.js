@@ -87,7 +87,7 @@ export function tick(calc, nowMs, budgetSteps = 500) {
   const st = calc.state.selfTest;
   if (st) {                                                 // ON+x self-test timer (see power.js)
     if (st.phase === 'running' && nowMs >= st.until) calc.state.selfTest = { phase: 'done' };
-    return st.phase === 'running';
+    return calc.state.selfTest.phase === 'running';
   }
   const p = calc.state.prog;
   if (!p.running) return false;
