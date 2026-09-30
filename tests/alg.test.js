@@ -42,3 +42,7 @@ test('paren annunciator', () => {
 test('back to RPN', () => {
   assert.equal(disp(run(alg(), 'RPN 3 ENTER 4 +')), '7.00');
 });
+test('a second operator replaces the pending one', () => {
+  assert.equal(disp(run(alg(), '5 + x 3 =')), '15.00');
+  assert.equal(disp(run(alg(), '2 + 3 x - 1 =')), '4.00');
+});

@@ -24,7 +24,10 @@ function evalPending(c) {
 }
 
 export function algBinary(c, opName) {
-  const s = c.state, x = s.stack[0], r = evalPending(c);
+  const s = c.state;
+  // Operator pressed right after another one (X is still the running result): just replace it.
+  if (s.alg.op && s.stack[0] === s.alg.acc) { s.alg.op = opName; return; }
+  const x = s.stack[0], r = evalPending(c);
   s.lastX = x;
   s.alg.acc = r; s.alg.op = opName;
   s.stack[0] = r; s.lift = false; s.finStored = false;
