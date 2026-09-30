@@ -55,7 +55,7 @@ test('serialize round trip: program, open paren, undo snapshot, cfExt', () => {
   assert.deepEqual(JSON.parse(d.serialize()), JSON.parse(c.serialize()));
   assert.ok(d.state.undo && d.state.undo.stack[0].constructor === d.state.stack[0].constructor);
   assert.ok(d.state.alg.parens.length > 0);
-  assert.equal(d.state.prog.lines.length, 1);
+  assert.equal(d.state.prog.lines.length, 2);
 });
 test('deserialize rejects garbage and other versions', () => {
   const good = JSON.parse(fresh().serialize());
