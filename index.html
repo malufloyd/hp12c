@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>HP 12C</title><link rel="stylesheet" href="styles.css"></head>
+<body><div id="app"></div>
+<script type="module">
+  import { createCalculatorView } from './src/ui/calculator-view.js';
+  const q = new URLSearchParams(location.search);
+  const view = createCalculatorView(document.getElementById('app'));
+  const ann = {}; (q.get('ann') ?? 'begin,rpn').split(',').forEach(a => a && (ann[a] = true));
+  view.update({ text: q.get('text') ?? '1,064.54', ann, running: q.has('running'), blink: q.has('blink'), off: q.has('off') });
+  window.view = view;
+  view.svg.addEventListener('pointerdown', e => { const c = view.keyAt(e.clientX, e.clientY);
+    if (c != null) { view.setPressed(c, true); addEventListener('pointerup', () => view.setPressed(c, false), { once: true }); } });
+  if (q.has('press')) q.get('press').split(',').forEach(c => view.setPressed(+c, true));
+</script></body></html>

@@ -1,0 +1,6 @@
+html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+#app { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+svg.calculator { width: 100%; height: 100%; display: block; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.lcd-blink { animation: lcd-flash 0.8s steps(1) infinite; }
+.lcd-running { animation: lcd-flash 1s steps(1) infinite; }
+@keyframes lcd-flash { 50% { opacity: 0; } }
