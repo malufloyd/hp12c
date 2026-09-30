@@ -19,7 +19,10 @@ export function formatLine(pc, codes) {
   if (pc === 0) return num;
   if (!codes) codes = [K.G, K.RDN, 0];                       // implicit GTO 000
   if (isGto(codes)) return num + '43,33,' + String(codes[2]).padStart(3, '0');
-  return num + codes.map(c => String(c).padStart(2, ' ')).join(' ').padStart(7, ' ');
+  // 7 cells after "nnn,": 1 or 2 codes fit space-separated; 3 codes (e.g. STO + 1) use comma decorations.
+  const plain = codes.map(c => String(c).padStart(2, ' ')).join(' ');
+  if (plain.length <= 7) return num + plain.padStart(7, ' ');
+  return num + codes.map(c => String(c).padStart(2, ' ')).join(',');
 }
 
 Object.assign(Calculator.prototype, {
@@ -38,10 +41,11 @@ Object.assign(Calculator.prototype, {
     const name = action.op ?? action.entry;
     if (IMMEDIATE.has(name) || (name === 'gto' && action.arg.dot)) { this.perform(action); return true; }
     if (NOT_PROGRAMMABLE.has(name)) return true;
-    if (p.lines.length >= MAX_LINES) { s.error = 4; return true; }
-    if (name === 'gto' && action.arg.n > allottedFor(p.lines.length + 1)) { s.error = 4; return true; }
-    const at = Math.min(p.pc, p.lines.length);
-    p.lines.splice(at, 0, name === 'gto' ? [K.G, K.RDN, action.arg.n] : codes);
+    // Keying an instruction at line pc REPLACES line pc+1 (manual sec. 10); past the last line it appends.
+    const at = Math.min(p.pc, p.lines.length), grows = at === p.lines.length;
+    if (grows && p.lines.length >= MAX_LINES) { s.error = 4; return true; }
+    if (name === 'gto' && action.arg.n > allottedFor(grows ? p.lines.length + 1 : p.lines.length)) { s.error = 4; return true; }
+    p.lines[at] = name === 'gto' ? [K.G, K.RDN, action.arg.n] : codes;
     p.pc = at + 1;
     p.allotted = allottedFor(p.lines.length);
     for (let r = this.availableRegs(); r < 20; r++) s.regs[r] = ZERO;   // converted registers are lost

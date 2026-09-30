@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, run, disp, steps } from './helpers.js';
+import { layoutCells } from '../src/ui/lcd.js';
 import { runUntilHalt, tick, formatLine } from '../src/engine/program.js';
 const runHalt = c => { runUntilHalt(c); return c; };
 
@@ -24,7 +25,7 @@ test('K2 ALG program', () => {
 });
 test('recording shifted and multi-key instructions', () => {
   const c = run(fresh(), 'P/R CLPRGM');
-  steps(c, [['DB', '001,  42 25'], ['STO + 1', '002,44 40  1'], ['GTO 000', '003,43,33,000']]);
+  steps(c, [['DB', '001,  42 25'], ['STO + 1', '002,44,40, 1'], ['GTO 000', '003,43,33,000']]);
 });
 test('conditional branch and loop', () => {
   const c = run(fresh(), 'P/R CLPRGM 1 - x=0 GTO 000 GTO 001 P/R');
@@ -47,12 +48,12 @@ test('BST/SST navigation in program mode', () => {
   const c = run(fresh(), 'P/R CLPRGM 1 2 3');
   steps(c, [['BST', '002,      2'], ['BST', '001,      1'], ['BST', '000,'], ['SST', '001,      1'], ['SST', '002,      2']]);
 });
-test('g GTO . nnn moves pc in program mode and inserts after it', () => {
+test('g GTO . nnn moves pc in program mode and the next key replaces line nnn+1', () => {
   const c = run(fresh(), 'P/R CLPRGM 1 2 3 GTO . 001');
   assert.equal(disp(c), '001,      1');
   run(c, '9');
   assert.equal(disp(c), '002,      9');
-  assert.deepEqual(c.state.prog.lines, [[1], [9], [2], [3]]);
+  assert.deepEqual(c.state.prog.lines, [[1], [9], [3]]);
 });
 test('non-programmable keys are ignored, CLEAR PRGM clears', () => {
   const c = run(fresh(), 'P/R CLPRGM 1 CLREG D.MY');
@@ -177,4 +178,49 @@ test('401st line gives Error 4; 400 lines leave no registers', () => {
 test('formatLine', () => {
   assert.equal(formatLine(0), '000,');
   assert.equal(formatLine(12, [43, 33, 5]), '012,43,33,005');
+  assert.equal(formatLine(1, [36]), '001,     36');             // 1 code
+  assert.equal(formatLine(4, [42, 25]), '004,  42 25');          // 2 codes
+  assert.equal(formatLine(1, [7]), '001,      7');
+});
+test('I4: 3-code lines fit the 10 cells with comma decorations', () => {
+  assert.equal(formatLine(1, [44, 40, 1]), '001,44,40, 1');
+  assert.equal(formatLine(12, [45, 48, 7]), '012,45,48, 7');
+  assert.equal(formatLine(3, [44, 48, 0]), '003,44,48, 0');
+  const c = run(fresh(), 'P/R CLPRGM STO + 1');
+  assert.equal(disp(c), '001,44,40, 1');
+  const cells = layoutCells(disp(c));
+  assert.equal(cells.cells.length, 10);
+  assert.equal(cells.cells.map(x => x.ch).join('').trim(), '0014440 1');   // 001 44 40 ' ' 1 on the cells
+  assert.equal(cells.cells[9].ch, '1');                          // register digit is visible
+});
+test('I3: keying replaces the next line, lines above/below unchanged, count stays', () => {
+  const c = run(fresh(), 'P/R CLPRGM 1 2 3 4 5 GTO . 002 9');
+  assert.deepEqual(c.state.prog.lines, [[1], [2], [9], [4], [5]]);
+  assert.equal(c.state.prog.pc, 3);
+  assert.equal(disp(c), '003,      9');
+  assert.equal(c.state.prog.lines.length, 5);
+  assert.equal(c.state.prog.allotted, 8);
+  run(c, 'SST'); assert.equal(disp(c), '004,      4');           // following line untouched
+});
+test('I3: replacing works for multi-code instructions and GTO lines', () => {
+  const c = run(fresh(), 'P/R CLPRGM RCL 2 x - GTO . 000 RCL 6');   // manual sec. 10 example
+  assert.deepEqual(c.state.prog.lines, [[45, 6], [20], [30]]);
+  run(c, 'GTO . 001 GTO 001');
+  assert.deepEqual(c.state.prog.lines, [[45, 6], [43, 33, 1], [30]]);
+});
+test('I3: keying past the last line appends and grows memory', () => {
+  const c = run(fresh(), 'P/R CLPRGM 1 2 3 GTO . 003 4');
+  assert.deepEqual(c.state.prog.lines, [[1], [2], [3], [4]]);
+  for (let i = 0; i < 6; i++) c.press(5);
+  assert.equal(c.state.prog.lines.length, 10);
+  assert.equal(c.state.prog.allotted, 15);
+  run(c, 'GTO . 002 7');                                            // replacing at full size keeps the length
+  assert.equal(c.state.prog.lines.length, 10);
+});
+test('I3: replacing a line at the 400-line cap is allowed, appending is Error 4', () => {
+  const c = run(fresh(), 'P/R CLPRGM');
+  for (let i = 0; i < 400; i++) c.press(1);
+  run(c, 'GTO . 010 2');
+  assert.equal(disp(c), '011,      2');
+  assert.equal(c.state.prog.lines.length, 400);
 });
