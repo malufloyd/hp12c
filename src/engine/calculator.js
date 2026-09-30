@@ -1,4 +1,4 @@
-import { D, ZERO, normalize } from './number.js';
+import { D, normalize } from './number.js';
 import { freshState } from './state.js';
 import { resolve } from './resolve.js';
 import { formatNumber, formatMantissa, formatEntry } from '../display.js';
@@ -27,7 +27,7 @@ export class Calculator {
     return fn(calc, arg);
   }
 
-  constructor(state = freshState()) { this.state = state; this.gtoBuf = ''; }
+  constructor(state = freshState()) { this.state = state; }
 
   // ---- hooks for later tasks (override / replace on the instance or prototype) ----
   recordKey(code) { return false; }        // Task 14: program-mode key recording; true = consumed
@@ -83,7 +83,7 @@ export class Calculator {
   editEntry({ entry, value }) {
     const s = this.state;
     if (!s.entry) {
-      if (entry === 'chs' || entry === 'backspace') return;
+      if (entry === 'chs') return;
       if (s.lift) s.stack = [s.stack[0], s.stack[0], s.stack[1], s.stack[2]];
       s.entry = { mant: '', exp: null, expNeg: false, neg: false };
       s.finStored = false;
@@ -116,21 +116,20 @@ export class Calculator {
     const s = this.state;
     if (s.off) return;
     if (s.error !== null) { s.error = null; s.blink = false; return; }
-    s.blink = false;
+    s.blink = false; s.showMantissa = false;
     if (s.prog.prgmMode && this.recordKey(code)) return;
     const action = resolve(this, code);
     if (!action) return;
     if (action.entry) {
-      const keep = action.entry === 'chs' || action.entry === 'backspace';
-      if (!keep || s.entry) return this.editEntry(action);
+      if (action.entry !== 'chs' || s.entry) return this.editEntry(action);   // chs with no entry runs as an op
     }
-    const name = action.op ?? action.entry;      // chs/backspace with no entry run as ops
+    const name = action.op ?? action.entry;
     this.exec(name, action.arg);
   }
   // End entry, snapshot, run one op; on CalcError roll back and set state.error.
   exec(name, arg) {
     const s = this.state;
-    this.endEntry();
+    if (name !== 'undo') this.endEntry();
     const snapshot = cloneState(s);
     try {
       if (name !== 'undo') this.saveUndo(name);

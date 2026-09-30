@@ -26,7 +26,7 @@ const G = {
   [K.YX]: 'sqrt', [K.RECIP]: 'ex', [K.PCTT]: 'ln', [K.DPCT]: 'frac', [K.PCT]: 'intg', [K.EEX]: 'ddys',
   4: 'dmy', 5: 'mdy', 6: 'xw', [K.MUL]: 'sq',
   [K.RS]: 'pse', [K.SST]: 'bst', [K.SWAP]: 'xley', [K.CLX]: 'xeq0', [K.ENTER]: 'equals',
-  1: 'xhat', 2: 'yhat', 3: 'fact', [K.SUB]: 'backspace',
+  1: 'xhat', 2: 'yhat', 3: 'fact',
   [K.STO]: 'lparen', [K.RCL]: 'rparen', 0: 'xbar', [K.DOT]: 's', [K.SIGMA]: 'sigmaMinus', [K.ADD]: 'lstx',
   // g GTO (33) is a prefix, handled in resolve()
 };
@@ -61,7 +61,8 @@ export function resolve(calc, code) {
       if (code === K.DOT) return { op: 'sci' };
       return F[code] ? { op: F[code] } : null;
     case 'g':
-      if (code === K.RDN) { s.prefix = 'GTO'; calc.gtoBuf = ''; return null; }
+      if (code === K.RDN) { s.prefix = 'GTO'; s.prefixBuf = ''; return null; }
+      if (code === K.SUB) return s.entry ? { entry: 'backspace' } : { op: 'backspace' };
       return G[code] ? { op: G[code] } : null;
     case 'STO': case 'RCL': {
       const op = p === 'STO' ? 'sto' : 'rcl';
@@ -77,12 +78,11 @@ export function resolve(calc, code) {
     case 'RCLg':
       return RCLG[code] ? { op: RCLG[code] } : null;
     case 'GTO': case 'GTO.': {
-      if (p === 'GTO' && code === K.DOT) { s.prefix = 'GTO.'; calc.gtoBuf = ''; return null; }
+      if (p === 'GTO' && code === K.DOT) { s.prefix = 'GTO.'; s.prefixBuf = ''; return null; }
       if (!isDigit(code)) return null;
-      calc.gtoBuf += code;
-      const need = p === 'GTO' ? 2 : 3;
-      if (calc.gtoBuf.length < need) { s.prefix = p; return null; }
-      const n = parseInt(calc.gtoBuf, 10); calc.gtoBuf = '';
+      s.prefixBuf += code;                           // line numbers are always 3 digits (000-399)
+      if (s.prefixBuf.length < 3) { s.prefix = p; return null; }
+      const n = parseInt(s.prefixBuf, 10); s.prefixBuf = '';
       return { op: 'gto', arg: { n, dot: p === 'GTO.' } };
     }
     default: {                                       // 'STO+' 'STO-' 'STO*' 'STO/' and '.' variants
