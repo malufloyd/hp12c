@@ -55,3 +55,11 @@ test('TVM errors', () => {
   assert.equal(disp(run(fresh(), 'CLFIN 0 n 100 PV i')), 'Error 5');
   assert.equal(disp(run(fresh(), 'CLFIN 10 n 100 PV 10 FV i')), 'Error 5');  // same sign flows
 });
+test('zero interest solves to exactly 0', () => {
+  assert.equal(disp(run(fresh(), 'CLFIN 5 n 1000 CHS PV 1000 FV i')), '0.00');
+});
+test('begin mode solves n and i', () => {
+  const c = run(fresh(), 'CLFIN BEG 1 i 1000 PV 100 CHS PMT n');
+  assert.equal(disp(c), '11.00');
+  assert.equal(disp(run(fresh(), 'CLFIN BEG 10 n 1000 PV 100 CHS PMT 0 FV i')), '0.00');
+});

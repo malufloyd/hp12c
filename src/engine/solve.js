@@ -9,7 +9,14 @@ function safe(f, x) {
 
 // Scan outward from guess for a sign change, then refine with Brent's method.
 // f: (r: D) => D. Returns D, or null when no bracket / no convergence.
-export function solveRoot(f, { lo, hi, guess }) {
+// Roots within 1e-15 of zero are exactly zero (e.g. i = 0 when PV = -FV and PMT = 0): the
+// solver's last-step noise must not show up as 4.18E-32 on the display.
+export function solveRoot(f, opts) {
+  const r = findRoot(f, opts);
+  return r !== null && r.abs().lt('1e-15') ? new D(0) : r;
+}
+
+function findRoot(f, { lo, hi, guess }) {
   lo = new D(lo); hi = new D(hi); guess = new D(guess);
   const g = guess.lt(lo) || guess.gt(hi) ? lo.plus(hi).div(2) : guess;
   const fg = safe(f, g);
