@@ -26,7 +26,7 @@ function bondModel(st) {
   const price = yld => {
     const r = yld.div(200);
     if (N === 1) {
-      return cpn.times(2).div(2).plus(100).div(new D(1).plus(new D(DSM).div(E).times(r))).minus(accrued);
+      return cpn.plus(100).div(new D(1).plus(new D(DSM).div(E).times(r))).minus(accrued);
     }
     const g = new D(1).plus(r);
     let p = new D(100).div(g.pow(dscE.plus(N - 1)));
