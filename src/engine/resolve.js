@@ -40,7 +40,6 @@ export function resolve(calc, code) {
   s.prefix = null;                                  // default: prefix is consumed
 
   if (p === 'RCL' && code === K.G) { s.prefix = 'RCLg'; return null; }
-  if (p === 'RCLg' && code === K.G) { s.prefix = 'RCLg'; return null; }   // extra g (helper tokens like Nj) keeps RCL g
   if (code === K.F || code === K.G) {
     const want = code === K.F ? 'f' : 'g';
     s.prefix = p === want ? null : want;            // same again cancels, other switches
