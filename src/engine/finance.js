@@ -111,3 +111,4 @@ function amort(c) {
   s.lift = true; s.finStored = false;
 }
 Calculator.register({ amort });
+import './bonds.js';   // bonds are part of the finance family
