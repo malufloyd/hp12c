@@ -81,7 +81,11 @@ function toggleLayout() {
   try { localStorage.setItem(LAYOUT_KEY, stretched() ? 'normal' : 'stretch'); } catch { /* ignore */ }
   fit();
 }
+// iOS fires resize mid-rotation, before the layout and safe-area insets settle, and may not fire again. So watch
+// the stage itself (its layout size, before the portrait rotation) and re-check once the rotation is over.
+if (window.ResizeObserver) new ResizeObserver(fit).observe(stage);
 addEventListener('resize', fit);
+addEventListener('orientationchange', () => setTimeout(fit, 500));
 fit();
 
 attachInput(view, { onDown: keyDown, onUp: keyUp, onLogo: toggleLayout });
