@@ -1,4 +1,5 @@
 import { createCalculatorView } from './ui/calculator-view.js';
+import { VIEWBOX, stretchedWidth } from './ui/geometry.js';
 import { attachInput } from './ui/input.js';
 import { initAudio, click, soundEnabled, setSoundEnabled } from './ui/sound.js';
 import { load, save } from './storage.js';
@@ -70,7 +71,20 @@ function keyUp(code, e) {
   if (!onDown) { calc.release(); afterKey(); }
 }
 
-attachInput(view, { onDown: keyDown, onUp: keyUp });
+// Layout: normal (the real 12C's proportions) or stretched to fill a wide screen. Tap the hp logo to switch.
+const LAYOUT_KEY = 'hp12c.layout';
+const stage = document.getElementById('stage');
+function stretched() { try { return localStorage.getItem(LAYOUT_KEY) === 'stretch'; } catch { return false; } }
+function fit() { view.setWidth(stretched() ? stretchedWidth(stage.clientWidth, stage.clientHeight) : VIEWBOX.w); }
+function toggleLayout() {
+  initAudio(); click();
+  try { localStorage.setItem(LAYOUT_KEY, stretched() ? 'normal' : 'stretch'); } catch { /* ignore */ }
+  fit();
+}
+addEventListener('resize', fit);
+fit();
+
+attachInput(view, { onDown: keyDown, onUp: keyUp, onLogo: toggleLayout });
 render();
 ensureLoop();
 window.__hp12c = { calc, view, press(code) { calc.press(code); calc.release(); afterKey(); } };

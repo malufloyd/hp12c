@@ -1,7 +1,7 @@
 // Builds the whole HP 12C Gold SVG once; update() only redraws the LCD.
 import { LAYOUT, BRACKETS } from '../engine/keys.js';
 import { renderLcd } from './lcd.js';
-import { KPITCH_Y, KW, KH, keyX, keyY, clientToViewBox, cellAt } from './geometry.js';
+import { VIEWBOX, KPITCH_Y, KH, keyY, makeGeometry, clientToViewBox } from './geometry.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const FONT = '"Helvetica Neue", Helvetica, Arial, sans-serif';
@@ -39,15 +39,16 @@ function defs(svg) {
   return d;
 }
 
-function buildBody(svg) {
-  el('rect', { x: 0, y: 0, width: 1280, height: 790, rx: 30, fill: '#141312' }, svg);
-  el('rect', { x: 1, y: 1, width: 1278, height: 788, rx: 29, fill: 'none', stroke: '#3b3936', 'stroke-width': 2 }, svg);
+function buildBody(svg, G) {
+  const W = G.w;
+  el('rect', { x: 0, y: 0, width: W, height: 790, rx: 30, fill: '#141312' }, svg);
+  el('rect', { x: 1, y: 1, width: W - 2, height: 788, rx: 29, fill: 'none', stroke: '#3b3936', 'stroke-width': 2 }, svg);
   // gold top plate
-  el('rect', { x: 20, y: 20, width: 1240, height: 205, rx: 6, fill: 'url(#gold)' }, svg);
-  el('rect', { x: 20, y: 20, width: 1240, height: 205, rx: 6, fill: 'url(#brush)' }, svg);
-  el('rect', { x: 20, y: 20, width: 1240, height: 205, rx: 6, fill: 'url(#plateShade)', opacity: 0.55 }, svg);
-  el('rect', { x: 20.5, y: 20.5, width: 1239, height: 204, rx: 6, fill: 'none', stroke: '#fff4d0', 'stroke-opacity': 0.5 }, svg);
-  el('rect', { x: 20, y: 222, width: 1240, height: 5, fill: '#0b0b0a' }, svg); // groove under the plate
+  el('rect', { x: 20, y: 20, width: W - 40, height: 205, rx: 6, fill: 'url(#gold)' }, svg);
+  el('rect', { x: 20, y: 20, width: W - 40, height: 205, rx: 6, fill: 'url(#brush)' }, svg);
+  el('rect', { x: 20, y: 20, width: W - 40, height: 205, rx: 6, fill: 'url(#plateShade)', opacity: 0.55 }, svg);
+  el('rect', { x: 20.5, y: 20.5, width: W - 41, height: 204, rx: 6, fill: 'none', stroke: '#fff4d0', 'stroke-opacity': 0.5 }, svg);
+  el('rect', { x: 20, y: 222, width: W - 40, height: 5, fill: '#0b0b0a' }, svg); // groove under the plate
   // LCD
   el('rect', { x: 56, y: 46, width: 748, height: 153, rx: 5, fill: 'url(#bezelGold)' }, svg);
   el('rect', { x: 60, y: 50, width: 740, height: 145, rx: 4, fill: '#7d6a3e' }, svg);
@@ -55,7 +56,7 @@ function buildBody(svg) {
   el('rect', { x: 80, y: 65, width: 700, height: 4, fill: '#000', opacity: 0.22 }, svg);   // inner shadow
   el('rect', { x: 80, y: 65, width: 4, height: 115, fill: '#000', opacity: 0.12 }, svg);
   // logo tile
-  const lg = el('g', { transform: 'translate(1090,45)' }, svg);
+  const lg = el('g', { transform: `translate(${G.logo.x0},${G.logo.y0})` }, svg);
   el('rect', { x: 0, y: 0, width: 140, height: 155, rx: 5, fill: '#b09a63' }, lg);
   el('rect', { x: 5, y: 5, width: 130, height: 145, rx: 3, fill: '#2a2620' }, lg);
   el('rect', { x: 9, y: 9, width: 122, height: 137, rx: 2, fill: '#0e0d0c' }, lg);
@@ -66,20 +67,21 @@ function buildBody(svg) {
   el('text', { x: 70, y: 137, 'text-anchor': 'middle', 'font-size': 23, 'font-weight': 700, 'font-family': FONT,
     fill: '#d9bd78', 'letter-spacing': 1 }, lg, '12C');
   // keyboard area
-  el('rect', { x: 20, y: 235, width: 1240, height: 535, fill: '#0d0d0c' }, svg);
-  el('rect', { x: 34, y: 246, width: 1214, height: 526, rx: 2, fill: 'none', stroke: '#3b3120', 'stroke-width': 1.5 }, svg);
-  el('rect', { x: 1247, y: 246, width: 3, height: 526, fill: '#9c7a3c' }, svg);
-  el('rect', { x: 34, y: 769, width: 1216, height: 3, fill: '#9c7a3c' }, svg);
+  el('rect', { x: 20, y: 235, width: W - 40, height: 535, fill: '#0d0d0c' }, svg);
+  el('rect', { x: 34, y: 246, width: W - 66, height: 526, rx: 2, fill: 'none', stroke: '#3b3120', 'stroke-width': 1.5 }, svg);
+  el('rect', { x: W - 33, y: 246, width: 3, height: 526, fill: '#9c7a3c' }, svg);
+  el('rect', { x: 34, y: 769, width: W - 64, height: 3, fill: '#9c7a3c' }, svg);
   el('text', { x: 60, y: 763, 'font-size': 17, 'font-weight': 600, 'font-family': FONT, fill: '#a98a4a',
     'letter-spacing': 11 }, svg, 'HEWLETT·PACKARD');
-  el('rect', { x: 690, y: 754, width: 550, height: 10, fill: '#8f7538' }, svg);
+  const barX = G.keyX(6) + 40;
+  el('rect', { x: barX, y: 754, width: W - 40 - barX, height: 10, fill: '#8f7538' }, svg);
 }
 
 function tw(text, size) { return text.length * size * 0.62; }
 
-function buildBrackets(svg) {
+function buildBrackets(svg, G) {
   for (const b of BRACKETS) {
-    const x1 = keyX(b.from) + 2, x2 = keyX(b.to) + KW - 2, y = keyY(b.row) - 33;
+    const x1 = G.keyX(b.from) + 2, x2 = G.keyX(b.to) + G.kw - 2, y = keyY(b.row) - 33;
     const mid = (x1 + x2) / 2, half = tw(b.text, 13) / 2 + 8;
     const g = el('g', { stroke: GOLD_LEG, 'stroke-width': 2, fill: 'none' }, svg);
     el('path', { d: `M${x1},${y + 9}V${y}H${mid - half}M${mid + half},${y}H${x2}V${y + 9}` }, g);
@@ -112,13 +114,14 @@ function primaryText(g, k, w, bodyH) {
   el('text', { ...base, x: cx, y, 'font-size': size }, g, k.label);
 }
 
-function buildKey(keysLayer, k) {
-  const x = keyX(k.col), y0 = keyY(k.row) + (k.code === 41 ? 6 : 0);
+function buildKey(keysLayer, k, G) {
+  const KW = G.kw;
+  const x = G.keyX(k.col), y0 = keyY(k.row) + (k.code === 41 ? 6 : 0);
   const h = KH + (k.rows - 1) * KPITCH_Y;
   const isF = k.code === 42, isG = k.code === 43;
   const outer = el('g', { transform: `translate(${x},${y0})`, 'data-key': k.code }, keysLayer);
   // f-legend printed on the panel (does not move)
-  if (k.f && !isF && !isG) el('text', { x: KW / 2, y: -13, 'text-anchor': 'middle', 'font-size': Math.min(18, 112 / (k.f.length * 0.62)), 'font-weight': 700,
+  if (k.f && !isF && !isG) el('text', { x: KW / 2, y: -13, 'text-anchor': 'middle', 'font-size': Math.min(18, (KW + 20) / (k.f.length * 0.62)), 'font-weight': 700,
     'font-family': FONT, fill: GOLD_LEG }, outer, k.f);
   // well
   el('rect', { x: -5, y: -5, width: KW + 10, height: h + 10, rx: 11, fill: '#070706', stroke: '#2b2823', 'stroke-width': 1.5 }, outer);
@@ -129,9 +132,9 @@ function buildKey(keysLayer, k) {
   if (!isF && !isG) {
     el('path', { d: `M0,${h - BAND}H${KW}V${h - 8}Q${KW},${h} ${KW - 8},${h}H8Q0,${h} 0,${h - 8}Z`, fill: 'url(#keyBand)' }, g);
     el('rect', { x: 0, y: h - BAND, width: KW, height: 1.5, fill: '#000', opacity: 0.7 }, g);
-    el('path', { d: 'M8,1.2H84', stroke: '#8a857b', 'stroke-width': 1.6, 'stroke-linecap': 'round', opacity: 0.75 }, g); // top highlight
+    el('path', { d: `M8,1.2H${KW - 8}`, stroke: '#8a857b', 'stroke-width': 1.6, 'stroke-linecap': 'round', opacity: 0.75 }, g); // top highlight
   } else {
-    el('path', { d: 'M8,1.2H84', stroke: '#fff', 'stroke-width': 1.6, 'stroke-linecap': 'round', opacity: 0.5 }, g);
+    el('path', { d: `M8,1.2H${KW - 8}`, stroke: '#fff', 'stroke-width': 1.6, 'stroke-linecap': 'round', opacity: 0.5 }, g);
     el('rect', { x: 0, y: h - 7, width: KW, height: 7, rx: 4, fill: '#000', opacity: 0.18 }, g);
   }
   el('rect', { x: 0.5, y: 0.5, width: KW - 1, height: h - 1, rx: 7.5, fill: 'none', stroke: '#000', 'stroke-opacity': 0.5 }, g);
@@ -142,31 +145,42 @@ function buildKey(keysLayer, k) {
   return { g, h, x, y: y0 };
 }
 
+// The SVG is rebuilt from scratch when the width changes (normal 1280, wider when stretched).
 export function createCalculatorView(container) {
-  const svg = el('svg', { viewBox: '0 0 1280 790', preserveAspectRatio: 'xMidYMid meet', class: 'calculator',
-    role: 'img', 'aria-label': 'HP 12C' });
-  defs(svg);
-  buildBody(svg);
-  const lcd = el('g', { class: 'lcd' }, svg);
-  buildBrackets(svg);
-  const keysLayer = el('g', {}, svg);
-  const keys = new Map();
-  for (const k of LAYOUT) keys.set(k.code, { ...buildKey(keysLayer, k), k });
+  const svg = el('svg', { preserveAspectRatio: 'xMidYMid meet', class: 'calculator', role: 'img', 'aria-label': 'HP 12C' });
+  let G, lcd, keys, last = null;
+  function build(w) {
+    G = makeGeometry(w);
+    svg.replaceChildren();
+    svg.setAttribute('viewBox', `0 0 ${G.w} ${G.h}`);
+    defs(svg);
+    buildBody(svg, G);
+    lcd = el('g', { class: 'lcd' }, svg);
+    buildBrackets(svg, G);
+    const keysLayer = el('g', {}, svg);
+    keys = new Map();
+    for (const k of LAYOUT) keys.set(k.code, { ...buildKey(keysLayer, k, G), k });
+    if (last) renderLcd(lcd, last);
+  }
+  build(VIEWBOX.w);
   container.appendChild(svg);
 
+  function toViewBox(clientX, clientY) {
+    const portrait = !!(window.matchMedia && matchMedia('(orientation: portrait)').matches);
+    return clientToViewBox(svg.getBoundingClientRect(), portrait, clientX, clientY, G);
+  }
   return {
     svg,
-    keyAt(clientX, clientY) {
-      const portrait = !!(window.matchMedia && matchMedia('(orientation: portrait)').matches);
-      const p = clientToViewBox(svg.getBoundingClientRect(), portrait, clientX, clientY);
-      return cellAt(p.x, p.y);
-    },
+    get width() { return G.w; },
+    setWidth(w) { if (w !== G.w) build(w); },
+    keyAt(clientX, clientY) { const p = toViewBox(clientX, clientY); return G.cellAt(p.x, p.y); },
+    logoAt(clientX, clientY) { const p = toViewBox(clientX, clientY); return G.onLogo(p.x, p.y); },
     setPressed(code, pressed) {
       const e = keys.get(code);
       if (!e) return;
       e.g.setAttribute('transform', pressed ? 'translate(0,3)' : '');
       e.g.querySelector('.shade').setAttribute('opacity', pressed ? 0.25 : 0);
     },
-    update(state) { renderLcd(lcd, state); },
+    update(state) { last = state; renderLcd(lcd, state); },
   };
 }

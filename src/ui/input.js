@@ -1,5 +1,5 @@
 // Pointer handling: one entry per active pointer (multi-touch), so ON + another key works.
-export function attachInput(view, { onDown, onUp }) {
+export function attachInput(view, { onDown, onUp, onLogo }) {
   const svg = view.svg;
   const active = new Map();   // pointerId -> key code
   const stop = e => e.preventDefault();
@@ -9,7 +9,7 @@ export function attachInput(view, { onDown, onUp }) {
   svg.addEventListener('pointerdown', e => {
     e.preventDefault();
     const code = view.keyAt(e.clientX, e.clientY);
-    if (code == null) return;
+    if (code == null) { if (onLogo && view.logoAt(e.clientX, e.clientY)) onLogo(e); return; }
     active.set(e.pointerId, code);
     view.setPressed(code, true);
     onDown(code, e);

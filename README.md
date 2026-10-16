@@ -11,6 +11,7 @@ Calculadora financeira HP 12C para iPhone, como app web instalável (PWA): visua
 Atalhos:
 - **ON** liga e desliga.
 - Segurar **ON** por 2 s liga ou desliga o clique das teclas.
+- Tocar no logo **hp 12C** alterna entre o tamanho original e o modo esticado, que ocupa a tela inteira (útil em celulares com tela mais comprida). O aparelho lembra a escolha.
 - **ON** + `.` troca vírgula por ponto.
 - **ON** + `−` apaga toda a memória.
 

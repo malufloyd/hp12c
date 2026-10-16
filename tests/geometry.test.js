@@ -41,3 +41,35 @@ test('portrait (rotate 90deg clockwise): calculator top is at the phone right, c
   const q = clientToViewBox(rect, true, 196.5, 10);                    // top edge, middle
   assert.ok(q.x < 50 && Math.abs(q.y - 395) < 1, `got ${q.x},${q.y}`);
 });
+
+import { makeGeometry, stretchedWidth } from '../src/ui/geometry.js';
+test('normal geometry is the classic 1280-wide layout', () => {
+  const G = makeGeometry();
+  assert.equal(G.kw, KW);
+  for (const k of LAYOUT) assert.equal(G.keyX(k.col), keyX(k.col));
+});
+test('stretched width follows the stage proportions, never narrower than normal', () => {
+  assert.equal(stretchedWidth(734, 369), Math.round(790 * 734 / 369));
+  assert.equal(stretchedWidth(800, 790), VIEWBOX.w);
+  assert.equal(stretchedWidth(0, 0), VIEWBOX.w);
+});
+test('stretched: wider keys, same right margin, keys hit at their centre on a wide stage', () => {
+  const w = stretchedWidth(734, 369), G = makeGeometry(w), vb = { w, h: VIEWBOX.h };
+  assert.ok(G.kw > KW);
+  assert.ok(Math.abs((w - (G.keyX(10) + G.kw)) - (VIEWBOX.w - (keyX(10) + KW))) < 1e-9);
+  for (const portrait of [false, true]) {
+    const rect = portrait ? { left: 0, top: 59, width: 369, height: 734 } : { left: 59, top: 12, width: 734, height: 369 };
+    const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2, s = 369 / VIEWBOX.h;
+    for (const k of LAYOUT) {
+      const vx = G.keyX(k.col) + G.kw / 2, vy = keyY(k.row) + (KH + (k.rows - 1) * KPITCH_Y) / 2;
+      const lx = (vx - w / 2) * s, ly = (vy - VIEWBOX.h / 2) * s;
+      const [px, py] = portrait ? [cx - ly, cy + lx] : [cx + lx, cy + ly];
+      const p = clientToViewBox(rect, portrait, px, py, vb);
+      assert.equal(G.cellAt(p.x, p.y), k.code, `key ${k.code} portrait=${portrait}`);
+    }
+    const lx = ((G.logo.x0 + G.logo.x1) / 2 - w / 2) * s, ly = ((G.logo.y0 + G.logo.y1) / 2 - VIEWBOX.h / 2) * s;
+    const [px, py] = portrait ? [cx - ly, cy + lx] : [cx + lx, cy + ly];
+    const p = clientToViewBox(rect, portrait, px, py, vb);
+    assert.ok(G.onLogo(p.x, p.y) && G.cellAt(p.x, p.y) === null, `logo portrait=${portrait}`);
+  }
+});
