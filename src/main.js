@@ -85,6 +85,8 @@ addEventListener('resize', fit);
 fit();
 
 attachInput(view, { onDown: keyDown, onUp: keyUp, onLogo: toggleLayout });
+addEventListener('touchend', initAudio, { passive: true });   // the gesture iOS accepts to unlock audio
+addEventListener('pointerup', initAudio);
 render();
 ensureLoop();
 window.__hp12c = { calc, view, press(code) { calc.press(code); calc.release(); afterKey(); } };

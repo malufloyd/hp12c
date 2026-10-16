@@ -8,7 +8,8 @@ export function soundEnabled() {
 export function setSoundEnabled(on) {
   try { localStorage.setItem(KEY, on ? '1' : '0'); } catch { /* ignore */ }
 }
-// Call from a user gesture (first pointerdown) so iOS lets audio start.
+// Call from a user gesture so iOS lets audio start. For touch, iOS only counts the end of the touch
+// (touchend/pointerup) as one, not pointerdown, so main.js also calls this on release.
 export function initAudio() {
   if (ctx) { if (ctx.state === 'suspended') ctx.resume?.(); return; }
   try {
